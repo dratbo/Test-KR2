@@ -1,0 +1,18 @@
+{{ if . }}
+<ul>
+    {{ range . }}
+    <li>
+        <div>
+            <strong>{{ .Title }}</strong>
+            {{ if .Description }}<br><small>{{ .Description }}</small>{{ end }}
+            {{ if .TargetItemClassName }}
+            <br><em>Цель: {{ .TargetItemClassName }} x {{ .TargetAmount }}</em>
+            {{ end }}
+        </div>
+        <button hx-delete="/tasks/delete/{{ .ID }}" hx-target="#tasks-list" hx-swap="innerHTML">Удалить</button>
+    </li>
+    {{ end }}
+</ul>
+{{ else }}
+<p>Задач пока нет. Создайте первую!</p>
+{{ end }}

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Satisfactory Task Manager</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body>
+<div class="container">
+    <h1>Мои задачи</h1>
+
+    <form hx-post="/tasks" hx-target="#tasks-list" hx-swap="innerHTML">
+        <input type="text" name="title" placeholder="Название задачи" required>
+        <textarea name="description" placeholder="Описание"></textarea>
+
+        <select name="target_item_class_name">
+            <option value="">-- Без предмета --</option>
+            {{ range . }}
+            <option value="{{ .ClassName }}">{{ .DisplayName }}</option>
+            {{ end }}
+        </select>
+
+        <input type="number" name="target_amount" placeholder="Количество" step="any">
+        <button type="submit">Добавить</button>
+    </form>
+
+    <div id="tasks-list" hx-get="/tasks" hx-trigger="load" hx-target="this" hx-swap="innerHTML">
+        Загрузка...
+    </div>
+    <a href="/logout">Выйти</a>
+</div>
+</body>
+</html>
