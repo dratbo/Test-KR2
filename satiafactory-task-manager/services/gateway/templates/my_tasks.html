@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Мои задачи — Satisfactory Task Manager</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body class="page-tasks page-my-tasks">
+{{ template "site_header" . }}
+
+<main class="layout layout-workspace">
+    <section class="panel panel-list panel-list-narrow">
+        <h1>Мои задачи</h1>
+        <input type="hidden" id="task-scope" name="task_scope" value="mine">
+        <p class="hint" id="tasks-hint">Задачи, назначенные на вас. Нажмите для подробностей.</p>
+        <div id="tasks-list" class="tasks-list tasks-list-compact" data-scope="mine"
+             hx-get="/tasks?scope=mine" hx-trigger="load" hx-swap="innerHTML">
+            <p class="hint">Загрузка…</p>
+        </div>
+    </section>
+
+    <section class="panel panel-detail panel-detail-wide">
+        <h2>Подробности</h2>
+        <div id="task-detail" class="task-detail-panel" data-task-id="">
+            <p class="hint">Выберите задачу из списка слева</p>
+        </div>
+    </section>
+</main>
+
+{{ template "tasks_scripts" . }}
+</body>
+</html>

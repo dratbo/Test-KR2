@@ -1,0 +1,24 @@
+<div id="production-area">
+    <div class="factory-plan-toolbar">
+        <label class="factory-shard-field">
+            <span>Энергомодулей в наличии</span>
+            <input type="number" id="shard-input" name="shards" class="shard-input" min="0" step="1"
+                   value="{{ .AvailableShards }}"
+                   hx-get="/tasks/production/{{ .TaskID }}"
+                   hx-trigger="change, keyup changed delay:400ms"
+                   hx-target="#production-area"
+                   hx-swap="outerHTML"
+                   hx-include="#shard-input">
+        </label>
+        {{ if and .FactoryPlan (gt .FactoryPlan.TotalShardsUsed 0) }}
+        <span class="hint">Используется: {{ .FactoryPlan.TotalShardsUsed }} / {{ .AvailableShards }} шт.</span>
+        {{ end }}
+    </div>
+
+    {{ if .FactoryPlan }}
+    {{ template "factory_plan.html" .FactoryPlan }}
+    {{ end }}
+    {{ if .ProductionPlan }}
+    {{ template "production_plan.html" .ProductionPlan }}
+    {{ end }}
+</div>

@@ -1,18 +1,42 @@
-{{ if . }}
-<ul>
-    {{ range . }}
-    <li>
-        <div>
-            <strong>{{ .Title }}</strong>
-            {{ if .Description }}<br><small>{{ .Description }}</small>{{ end }}
-            {{ if .TargetItemClassName }}
-            <br><em>Цель: {{ .TargetItemClassName }} x {{ .TargetAmount }}</em>
-            {{ end }}
+{{ if .Tasks }}
+<div class="task-cards">
+    {{ range .Tasks }}
+    <article class="task-card task-card-clickable status-{{ .Status }}"
+             hx-get="/tasks/detail/{{ .ID }}"
+             hx-target="#task-detail"
+             hx-swap="innerHTML">
+        <div class="task-card-head">
+            <img src="{{ .IconURL }}" alt="" class="item-icon item-icon-lg"
+                 onerror="this.src='/static/placeholder.svg'">
+            <div class="task-card-title">
+                <h3>{{ .Title }}</h3>
+                <div class="task-meta">
+                    <span class="badge badge-status">{{ .StatusLabel }}</span>
+                    {{ if .CreatorName }}<span class="badge badge-muted">от {{ .CreatorName }}</span>{{ end }}
+                    {{ if .AssigneeName }}<span class="badge badge-assignee">→ {{ .AssigneeName }}</span>{{ end }}
+                </div>
+            </div>
+            <button class="btn btn-danger btn-sm"
+                    hx-delete="/tasks/delete/{{ .ID }}?scope={{ $.Scope }}"
+                    hx-target="#tasks-list"
+                    hx-swap="innerHTML"
+                    hx-confirm="Удалить задачу?"
+                    onclick="event.stopPropagation()">✕</button>
         </div>
-        <button hx-delete="/tasks/delete/{{ .ID }}" hx-target="#tasks-list" hx-swap="innerHTML">Удалить</button>
-    </li>
+        {{ if .RecipeName }}
+        <p class="task-summary">{{ .RecipeName }} — {{ printf "%g" .TargetAmount }} предм./мин</p>
+        {{ end }}
+    </article>
     {{ end }}
-</ul>
+</div>
 {{ else }}
-<p>Задач пока нет. Создайте первую!</p>
+<p class="hint empty-state">
+    {{ if eq .Scope "mine" }}
+    У вас пока нет активных назначенных задач.
+    {{ else if eq .Scope "completed" }}
+    Выполненных задач пока нет.
+    {{ else }}
+    Активных задач пока нет. Создайте первую для команды!
+    {{ end }}
+</p>
 {{ end }}

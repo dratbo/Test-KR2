@@ -9,6 +9,7 @@ import (
 
 	"github.com/dratbo/satisfactory-task-manager/satisfactory-data-service/internal/config"
 	"github.com/dratbo/satisfactory-task-manager/satisfactory-data-service/internal/database"
+	"github.com/dratbo/satisfactory-task-manager/satisfactory-data-service/internal/i18n"
 	"github.com/dratbo/satisfactory-task-manager/satisfactory-data-service/internal/handlers"
 	"github.com/dratbo/satisfactory-task-manager/satisfactory-data-service/internal/parser"
 	"github.com/dratbo/satisfactory-task-manager/satisfactory-data-service/internal/repository"
@@ -26,6 +27,9 @@ func main() {
 	}
 	defer db.Close()
 
+	database.RunMigrations(db, "migrations")
+	i18n.Load("./data/ru_names.json")
+
 	if *importFlag {
 		log.Println("Starting import...")
 		if err := parser.RunParser(db, cfg.DataFilePath); err != nil {
@@ -35,9 +39,22 @@ func main() {
 		return
 	}
 
+	recipeRepo := repository.NewRecipeRepository(db)
+	count, err := recipeRepo.Count()
+	if err != nil {
+		log.Fatal("recipe count:", err)
+	}
+	if count == 0 {
+		log.Println("Database empty, importing Docs.json (first run may take a few minutes)...")
+		if err := parser.RunParser(db, cfg.DataFilePath); err != nil {
+			log.Fatal("Auto-import failed:", err)
+		}
+	} else {
+		log.Printf("Recipes in database: %d", count)
+	}
+
 	// Инициализация репозиториев
 	itemRepo := repository.NewItemRepository(db)
-	recipeRepo := repository.NewRecipeRepository(db)
 	buildingRepo := repository.NewBuildingRepository(db)
 
 	// Хендлеры
@@ -49,6 +66,10 @@ func main() {
 	mux.HandleFunc("GET /api/items", itemHandler.ListItems)
 	mux.HandleFunc("GET /api/items/{className}", itemHandler.GetItem)
 	mux.HandleFunc("GET /api/recipes", recipeHandler.ListRecipes)
+	mux.HandleFunc("GET /api/recipes/search", recipeHandler.SearchRecipes)
+	mux.HandleFunc("GET /api/recipes/by-product/{className}", recipeHandler.GetRecipesByProduct)
+	mux.HandleFunc("GET /api/recipes/has-product/{className}", recipeHandler.HasRecipeForProduct)
+	mux.HandleFunc("GET /api/recipes/{className}", recipeHandler.GetRecipe)
 	mux.HandleFunc("GET /api/buildings", buildingHandler.ListBuildings)
 
 	log.Printf("Satisfactory Data Service running on port %s", cfg.Port)

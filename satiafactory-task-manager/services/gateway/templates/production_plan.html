@@ -1,0 +1,58 @@
+{{ if . }}
+<div class="production-plan">
+    <p class="preview-label">Производство: {{ .BuildingName }}</p>
+    <p class="hint production-hint">
+        Базовая скорость: <strong>{{ printf "%.1f" .BaseRate }}</strong> предм./мин (100%)
+        {{ if .Duration }}· цикл {{ printf "%.1f" .Duration }} с{{ end }}
+        {{ if .RequiredRate }}· цель <strong>{{ printf "%.1f" .RequiredRate }}</strong> предм./мин{{ end }}
+    </p>
+
+    {{ if .AllowsPowerShard }}
+    <table class="production-rate-table">
+        <thead>
+            <tr>
+                <th>Энергомодули</th>
+                <th>Скорость</th>
+                <th>Предм./мин</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ range .RateTable }}
+            <tr>
+                <td>{{ .Shards }}</td>
+                <td>{{ .ClockPercent }}%</td>
+                <td>{{ printf "%.1f" .ItemsPerMin }}</td>
+            </tr>
+            {{ end }}
+        </tbody>
+    </table>
+    {{ end }}
+
+    {{ range .Scenarios }}
+    <div class="production-scenario{{ if and $.Chosen (eq .Name $.Chosen.Name) }} production-scenario-chosen{{ end }}">
+        <p class="production-scenario-title">
+            <strong>{{ .Name }}</strong>
+            {{ if and $.Chosen (eq .Name $.Chosen.Name) }}<span class="badge badge-status">выбрано</span>{{ end }}
+            <span class="hint">— {{ .TotalMachines }} постр. · {{ printf "%.1f" .TotalRate }} предм./мин{{ if gt .ShardsUsed 0 }} · {{ .ShardsUsed }} энергомод.{{ end }}</span>
+        </p>
+        <ul class="production-slot-list">
+            {{ range .Slots }}
+            <li>
+                {{ .Count }}× {{ $.BuildingName }}
+                {{ if $.AllowsPowerShard }}
+                {{ if gt .Shards 0 }}({{ .Shards }} энергомодул{{ if eq .Shards 1 }}ь{{ else }}я{{ end }}, {{ .ClockPercent }}%){{ else }}(100%){{ end }}
+                {{ else }}
+                ({{ .ClockPercent }}%)
+                {{ end }}
+                — {{ printf "%.1f" .RatePerMachine }} предм./мин каждая
+            </li>
+            {{ end }}
+        </ul>
+    </div>
+    {{ end }}
+
+    {{ if .IsExtractor }}
+    <p class="hint production-extractor-note">Добыча с месторождения (нормальная чистота узла — 60 предм./мин на 100%).</p>
+    {{ end }}
+</div>
+{{ end }}

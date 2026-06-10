@@ -55,6 +55,46 @@ func (r *UserRepository) FindByUsername(username string) (*models.User, error) {
 	return user, nil
 }
 
+func (r *UserRepository) Search(query string) ([]models.User, error) {
+	if query == "" {
+		return r.ListAll()
+	}
+	rows, err := r.db.Query(
+		`SELECT id, username, email, created_at FROM users WHERE username ILIKE '%' || $1 || '%' ORDER BY username LIMIT 20`,
+		query,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("search users: %w", err)
+	}
+	defer rows.Close()
+	var users []models.User
+	for rows.Next() {
+		var u models.User
+		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.CreatedAt); err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, nil
+}
+
+func (r *UserRepository) ListAll() ([]models.User, error) {
+	rows, err := r.db.Query(`SELECT id, username, email, created_at FROM users ORDER BY username`)
+	if err != nil {
+		return nil, fmt.Errorf("list users: %w", err)
+	}
+	defer rows.Close()
+	var users []models.User
+	for rows.Next() {
+		var u models.User
+		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.CreatedAt); err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, nil
+}
+
 func (r *UserRepository) FindByID(id int64) (*models.User, error) {
 	user := &models.User{}
 	query := `SELECT id, username, email, created_at FROM users WHERE id = $1`

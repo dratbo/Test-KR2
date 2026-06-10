@@ -2,33 +2,106 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Satisfactory Task Manager</title>
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 </head>
-<body>
-<div class="container">
-    <h1>Мои задачи</h1>
+<body class="page-tasks">
+{{ template "site_header" . }}
 
-    <form hx-post="/tasks" hx-target="#tasks-list" hx-swap="innerHTML">
-        <input type="text" name="title" placeholder="Название задачи" required>
-        <textarea name="description" placeholder="Описание"></textarea>
+<main class="layout layout-team">
+    <section class="panel panel-form">
+        <h1>Новая задача</h1>
+        <form class="task-form"
+              hx-post="/tasks"
+              hx-target="#tasks-list"
+              hx-swap="innerHTML"
+              hx-include="#task-scope">
+            <label class="field">
+                <span>Название</span>
+                <input type="text" name="title" id="task-title" placeholder="Например: Производство стали">
+            </label>
 
-        <select name="target_item_class_name">
-            <option value="">-- Без предмета --</option>
-            {{ range . }}
-            <option value="{{ .ClassName }}">{{ .DisplayName }}</option>
-            {{ end }}
-        </select>
+            <label class="field">
+                <span>Описание</span>
+                <textarea name="description" id="task-description" rows="2" placeholder="Заметки для команды"></textarea>
+            </label>
 
-        <input type="number" name="target_amount" placeholder="Количество" step="any">
-        <button type="submit">Добавить</button>
-    </form>
+            <label class="field">
+                <span>Рецепт из игры</span>
+                <input type="search" id="recipe-search" name="q" placeholder="Iron Plate, железная плата, circuit board…"
+                       hx-get="/recipes/search"
+                       hx-trigger="keyup changed delay:350ms, search"
+                       hx-target="#recipe-results"
+                       hx-include="#recipe-search, #include-alternates"
+                       autocomplete="off">
+            </label>
+            <label class="field field-check">
+                <input type="checkbox" id="include-alternates" name="include_alternates" value="1"
+                       hx-get="/recipes/search"
+                       hx-trigger="change"
+                       hx-target="#recipe-results"
+                       hx-include="#recipe-search, #include-alternates">
+                <span>Показать альтернативные рецепты</span>
+            </label>
+            <div id="recipe-results" class="recipe-results"></div>
+            <input type="hidden" name="target_item_class_name" id="recipe-class" value="">
+            <div id="recipe-preview" class="recipe-preview-wrap"></div>
 
-    <div id="tasks-list" hx-get="/tasks" hx-trigger="load" hx-target="this" hx-swap="innerHTML">
-        Загрузка...
-    </div>
-    <a href="/logout">Выйти</a>
-</div>
+            <label class="field field-inline">
+                <span>Производство в минуту</span>
+                <input type="number" name="target_amount" id="target-amount" value="60" min="0.1" step="any"
+                       hx-get="/recipes/preview"
+                       hx-trigger="change"
+                       hx-target="#recipe-preview"
+                       hx-include="#recipe-class, #target-amount">
+            </label>
+
+            <label class="field">
+                <span>Кто выполняет</span>
+                <div id="user-favorites" class="user-favorites-wrap"
+                     hx-get="/users/favorites" hx-trigger="load" hx-swap="innerHTML"></div>
+                <input type="search" id="user-search" name="uq" placeholder="Поиск игрока…"
+                       hx-get="/users/search"
+                       hx-trigger="keyup changed delay:300ms, search"
+                       hx-target="#user-results"
+                       hx-include="this"
+                       autocomplete="off">
+            </label>
+            <div id="user-results" class="user-results"></div>
+            <input type="hidden" name="assigned_to_user_id" id="assigned-user-id" value="">
+            <p id="selected-user" class="hint selected-user"></p>
+
+            <button type="submit" class="btn btn-primary">Создать для команды</button>
+        </form>
+    </section>
+
+    <section class="panel panel-list">
+        <div class="task-tabs">
+            <button type="button" class="task-tab active" id="tab-all"
+                    onclick="switchTaskTab('all')">Задачи команды</button>
+            <button type="button" class="task-tab" id="tab-mine"
+                    onclick="switchTaskTab('mine')">Свои задачи</button>
+            <button type="button" class="task-tab" id="tab-completed"
+                    onclick="switchTaskTab('completed')">Выполненные</button>
+        </div>
+        <input type="hidden" id="task-scope" name="task_scope" value="all">
+        <p class="hint" id="tasks-hint">Все задачи команды. Нажмите на задачу для подробностей.</p>
+        <div id="tasks-list" class="tasks-list" data-scope="all"
+             hx-get="/tasks?scope=all" hx-trigger="load" hx-swap="innerHTML">
+            <p class="hint">Загрузка…</p>
+        </div>
+    </section>
+
+    <section class="panel panel-detail">
+        <h2>Подробности</h2>
+        <div id="task-detail" class="task-detail-panel" data-task-id="">
+            <p class="hint">Выберите задачу из списка</p>
+        </div>
+    </section>
+</main>
+
+{{ template "tasks_scripts" . }}
 </body>
 </html>

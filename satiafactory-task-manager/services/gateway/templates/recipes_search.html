@@ -1,0 +1,19 @@
+{{ if . }}
+<div class="recipe-picker">
+    {{ range . }}
+    <button type="button" class="recipe-option recipe-option-lg"
+            data-class="{{ .ClassName }}" data-name="{{ .DisplayName }}"
+            onclick="selectRecipe(this.dataset.class, this.dataset.name)">
+        <img src="{{ .IconURL }}" alt="" class="item-icon item-icon-search" loading="lazy"
+             onerror="this.src='/static/placeholder.svg'">
+        <span class="recipe-option-text">
+            <strong>{{ .DisplayName }}</strong>
+            {{ if .IsAlternate }}<span class="badge badge-alt">Альтернатива</span>{{ end }}
+            {{ if .EnglishName }}<small class="recipe-name-sub">{{ .EnglishName }}</small>{{ end }}
+        </span>
+    </button>
+    {{ end }}
+</div>
+{{ else }}
+<p class="hint">Ничего не найдено. Попробуйте: iron plate, железная пластина, circuit board…</p>
+{{ end }}

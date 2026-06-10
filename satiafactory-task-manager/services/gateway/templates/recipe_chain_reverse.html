@@ -1,0 +1,25 @@
+<div class="chain-reverse-column">
+    <p class="hint chain-reverse-hint">От сырья к основной задаче — открывайте шаги по порядку.</p>
+    {{ range .Tiers }}
+    <details class="chain-tier-section" {{ if .First }}open{{ end }}>
+        <summary class="chain-tier-label">{{ .Label }}</summary>
+        <div class="chain-tier-items">
+            {{ range .Items }}
+            <div class="recipe-chain-block chain-reverse-block" data-chain-key="{{ .ChainKey }}">
+                <div class="recipe-chain-head">
+                    <img src="{{ .IconURL }}" alt="" class="item-icon" onerror="this.src='/static/placeholder.svg'">
+                    <div class="recipe-chain-title">
+                        <strong>{{ .Name }}</strong>
+                        <span class="hint">{{ printf "%g" .Amount }} предм./мин</span>
+                        {{ if .RecipeTitle }}
+                        <span class="hint chain-recipe-sub">{{ if .RawResource }}базовый ресурс{{ else }}рецепт: {{ .RecipeTitle }}{{ end }}</span>
+                        {{ end }}
+                    </div>
+                    <button type="button" class="btn-chain-done" onclick="toggleChainDone(this)">Выполнено</button>
+                </div>
+            </div>
+            {{ end }}
+        </div>
+    </details>
+    {{ end }}
+</div>

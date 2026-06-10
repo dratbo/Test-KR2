@@ -5,14 +5,14 @@
     <title>Регистрация - Satisfactory Task Manager</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
+<body class="page-auth">
 <div class="container">
     <h1>Регистрация</h1>
     <form action="/register" method="post">
-        <input type="text" name="username" placeholder="Имя пользователя" required>
-        <input type="email" name="email" placeholder="Email" required>
-        <input type="password" name="password" placeholder="Пароль" required>
-        <button type="submit">Зарегистрироваться</button>
+        <label class="field"><span>Имя</span><input type="text" name="username" required></label>
+        <label class="field"><span>Email</span><input type="email" name="email" required></label>
+        <label class="field"><span>Пароль</span><input type="password" name="password" required></label>
+        <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
     </form>
     <p>Уже есть аккаунт? <a href="/login">Войти</a></p>
 </div>

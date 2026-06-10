@@ -1,0 +1,12 @@
+{{ if . }}
+<div class="favorites-row">
+    {{ range . }}
+    <button type="button" class="favorite-chip"
+            data-id="{{ .ID }}" data-name="{{ .Username }}"
+            onclick="selectUser(this.dataset.id, this.dataset.name)">
+        <span class="user-avatar">{{ printf "%.1s" .Username }}</span>
+        {{ .Username }}
+    </button>
+    {{ end }}
+</div>
+{{ end }}

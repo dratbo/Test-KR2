@@ -1,0 +1,12 @@
+.idea/
+*.iml
+.vscode/
+*.exe
+*.dll
+*.so
+*.dylib
+.env
+.env.*
+*.log
+Thumbs.db
+Desktop.ini

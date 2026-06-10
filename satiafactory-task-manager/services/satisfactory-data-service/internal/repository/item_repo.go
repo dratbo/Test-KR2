@@ -3,7 +3,9 @@ package repository
 import (
 	"database/sql"
 	"encoding/json"
+
 	"github.com/dratbo/satisfactory-task-manager/satisfactory-data-service/internal/models"
+	"github.com/lib/pq"
 )
 
 type ItemRepository struct {
@@ -50,6 +52,26 @@ func (r *ItemRepository) GetAll() ([]models.Item, error) {
 		items = append(items, it)
 	}
 	return items, nil
+}
+
+func (r *ItemRepository) GetDisplayNames(classNames []string) (map[string]string, error) {
+	result := make(map[string]string, len(classNames))
+	if len(classNames) == 0 {
+		return result, nil
+	}
+	rows, err := r.db.Query(`SELECT class_name, display_name FROM items WHERE class_name = ANY($1)`, pq.Array(classNames))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var className, displayName string
+		if err := rows.Scan(&className, &displayName); err != nil {
+			return nil, err
+		}
+		result[className] = displayName
+	}
+	return result, nil
 }
 
 func (r *ItemRepository) GetByClassName(className string) (*models.Item, error) {

@@ -44,46 +44,51 @@ func RunParser(db *sql.DB, filePath string) error {
 	recipeRepo := repository.NewRecipeRepository(db)
 	// schematicRepo := repository.NewSchematicRepository(db) // если понадобится
 
-	itemCount := 0
-	buildingCount := 0
-	recipeCount := 0
-	// schematicCount := 0
+	var pendingItems []*models.Item
+	var pendingBuildings []*models.Building
+	var pendingRecipes []*models.Recipe
 
 	for _, c := range root.Classes {
 		switch c.NativeClass {
 		case "FGItemDescriptor", "FGResourceDescriptor", "FGEquipmentDescriptor", "FGConsumableDescriptor":
-			item := parseItem(c)
-			if item != nil {
-				if err := itemRepo.Insert(item); err != nil {
-					log.Printf("Warning: insert item %s: %v", item.ClassName, err)
-				} else {
-					itemCount++
-				}
+			if item := parseItem(c); item != nil {
+				pendingItems = append(pendingItems, item)
 			}
-
 		case "FGBuildable", "FGBuildableFactory", "FGBuildableResourceExtractor", "FGBuildableManufacturer", "FGBuildableGenerator", "FGBuildableConstructor", "FGBuildableMiner", "FGBuildablePipeline", "FGBuildableTrainPlatform", "FGBuildableVehicle":
-			building := parseBuilding(c)
-			if building != nil {
-				if err := buildingRepo.Insert(building); err != nil {
-					log.Printf("Warning: insert building %s: %v", building.ClassName, err)
-				} else {
-					buildingCount++
-				}
+			if building := parseBuilding(c); building != nil {
+				pendingBuildings = append(pendingBuildings, building)
 			}
-
 		case "FGRecipe":
-			recipe := parseRecipe(c)
-			if recipe != nil {
-				if err := recipeRepo.Insert(recipe); err != nil {
-					log.Printf("Warning: insert recipe %s: %v", recipe.ClassName, err)
-				} else {
-					recipeCount++
-				}
+			if recipe := parseRecipe(c); recipe != nil {
+				pendingRecipes = append(pendingRecipes, recipe)
 			}
+		}
+	}
 
-		case "FGSchematic":
-			// можно добавить позже
-			// schematic := parseSchematic(c)
+	itemCount := 0
+	for _, item := range pendingItems {
+		if err := itemRepo.Insert(item); err != nil {
+			log.Printf("Warning: insert item %s: %v", item.ClassName, err)
+		} else {
+			itemCount++
+		}
+	}
+
+	buildingCount := 0
+	for _, building := range pendingBuildings {
+		if err := buildingRepo.Insert(building); err != nil {
+			log.Printf("Warning: insert building %s: %v", building.ClassName, err)
+		} else {
+			buildingCount++
+		}
+	}
+
+	recipeCount := 0
+	for _, recipe := range pendingRecipes {
+		if err := recipeRepo.Insert(recipe); err != nil {
+			log.Printf("Warning: insert recipe %s: %v", recipe.ClassName, err)
+		} else {
+			recipeCount++
 		}
 	}
 

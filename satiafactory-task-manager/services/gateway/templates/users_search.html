@@ -1,0 +1,23 @@
+{{ if .Users }}
+<div class="user-picker">
+    {{ range .Users }}
+    <div class="user-option">
+        <button type="button" class="user-option-main"
+                data-id="{{ .ID }}" data-name="{{ .Username }}"
+                onclick="selectUser(this.dataset.id, this.dataset.name)">
+            <span class="user-avatar">{{ printf "%.1s" .Username }}</span>
+            <span>{{ .Username }}</span>
+        </button>
+        <button type="button" class="btn-star {{ if .IsFavorite }}starred{{ end }}"
+                title="{{ if .IsFavorite }}Убрать из избранного{{ else }}В избранное{{ end }}"
+                hx-post="/users/favorite/toggle?id={{ .ID }}&action={{ if .IsFavorite }}remove{{ else }}add{{ end }}&q={{ $.Query }}"
+                hx-target="#user-results"
+                hx-swap="innerHTML"
+                hx-on::after-request="htmx.ajax('GET','/users/favorites',{target:'#user-favorites',swap:'innerHTML'})"
+                onclick="event.stopPropagation()">{{ if .IsFavorite }}★{{ else }}☆{{ end }}</button>
+    </div>
+    {{ end }}
+</div>
+{{ else }}
+<p class="hint">Никого не найдено</p>
+{{ end }}

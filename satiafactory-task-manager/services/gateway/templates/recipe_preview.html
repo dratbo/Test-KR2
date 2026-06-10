@@ -1,0 +1,38 @@
+{{ if .RecipeClass }}
+<div class="recipe-preview">
+    <div class="recipe-preview-head">
+        {{ if .IconURL }}
+        <img src="{{ .IconURL }}" alt="" class="item-icon item-icon-lg" loading="lazy"
+             onerror="this.src='/static/placeholder.svg'">
+        {{ end }}
+        <div>
+            <strong>{{ .Title }}</strong>
+            <p class="hint">Производство: {{ printf "%g" .Multiplier }} предм./мин{{ if .Duration }} · {{ printf "%.1f" .Duration }} с / цикл{{ end }}</p>
+        </div>
+    </div>
+
+    {{ if .Products }}
+    <p class="preview-label">Производится (в минуту)</p>
+    <ul class="resource-list">
+        {{ range .Products }}
+        <li>
+            <img src="{{ .IconURL }}" alt="" class="item-icon" onerror="this.src='/static/placeholder.svg'">
+            <span>{{ .Name }} — {{ printf "%g" .Amount }} предм./мин</span>
+        </li>
+        {{ end }}
+    </ul>
+    {{ end }}
+
+    {{ if .Ingredients }}
+    <p class="preview-label">Нужно для крафта (в минуту)</p>
+    <ul class="resource-list">
+        {{ range .Ingredients }}
+        <li>
+            <img src="{{ .IconURL }}" alt="" class="item-icon" onerror="this.src='/static/placeholder.svg'">
+            <span>{{ .Name }} — {{ printf "%g" .Amount }} предм./мин</span>
+        </li>
+        {{ end }}
+    </ul>
+    {{ end }}
+</div>
+{{ end }}

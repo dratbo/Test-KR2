@@ -1,0 +1,261 @@
+<div class="task-detail" data-task-id="{{ .Task.ID }}">
+
+    <div class="task-detail-head">
+
+        <img src="{{ .Task.IconURL }}" alt="" class="item-icon item-icon-xl"
+
+             onerror="this.src='/static/placeholder.svg'">
+
+        <div>
+
+            <h2>{{ .Task.Title }}</h2>
+
+            <div class="task-meta">
+
+                <span class="badge badge-status">{{ .Task.StatusLabel }}</span>
+
+                {{ if .Task.CreatorName }}<span class="badge badge-muted">Создал: {{ .Task.CreatorName }}</span>{{ end }}
+
+                {{ if .Task.AssigneeName }}<span class="badge badge-assignee">Выполняет: {{ .Task.AssigneeName }}</span>{{ else }}<span class="badge badge-muted">Никто не назначен</span>{{ end }}
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    {{ if .Task.Description }}
+
+    <p class="task-desc">{{ .Task.Description }}</p>
+
+    {{ end }}
+
+
+
+    {{ if .Task.RecipeName }}
+
+    <div class="detail-block detail-block-recipe-summary">
+
+        <p class="preview-label">Рецепт</p>
+
+        <p><strong>{{ .Task.RecipeName }}</strong> — {{ printf "%g" .Task.TargetAmount }} предм./мин
+
+        {{ if .Task.Duration }}<span class="hint">({{ printf "%.1f" .Task.Duration }} с / цикл)</span>{{ end }}</p>
+
+    </div>
+
+    {{ end }}
+
+
+
+    {{ if .Task.Products }}
+
+    <div class="detail-block">
+
+        <p class="preview-label">Производится (в минуту)</p>
+
+        <ul class="resource-list">
+
+            {{ range .Task.Products }}
+
+            <li>
+
+                <img src="{{ .IconURL }}" alt="" class="item-icon" onerror="this.src='/static/placeholder.svg'">
+
+                <span>{{ .Name }} — {{ printf "%g" .Amount }} предм./мин</span>
+
+            </li>
+
+            {{ end }}
+
+        </ul>
+
+    </div>
+
+    {{ end }}
+
+
+
+    {{ if .Task.Ingredients }}
+
+    <div class="detail-block detail-block-chain">
+
+        <div class="chain-mode-toolbar">
+
+            <p class="preview-label">Нужно для изготовления (в минуту)</p>
+
+            {{ if .Task.TargetItemClassName }}
+
+            <button type="button" class="btn btn-ghost btn-sm btn-chain-reverse"
+
+                    id="btn-chain-reverse"
+
+                    data-recipe="{{ .Task.TargetItemClassName }}"
+
+                    data-amount="{{ printf "%g" .Task.TargetAmount }}"
+
+                    data-mode="forward"
+
+                    onclick="toggleChainReverse(this)">Рецепт задом наперёд</button>
+
+            {{ end }}
+
+        </div>
+
+        <div id="chain-reverse-view" class="chain-reverse-view" hidden></div>
+
+        <div id="chain-forward-view">
+
+        <ul class="resource-list resource-list-chain">
+
+            {{ range .Task.Ingredients }}
+
+            <li class="ingredient-row">
+
+                {{ if .Craftable }}
+
+                <button type="button" class="ingredient-link"
+
+                        data-chain-url="/recipes/chain?item={{ .Class }}&amount={{ printf "%g" .Amount }}&depth=1&root_total={{ printf "%g" $.Task.RootTotalItems }}&root_rate={{ printf "%g" $.Task.RootRequiredRate }}&shards={{ $.ProductionData.AvailableShards }}"
+
+                        onclick="toggleIngredientChain(this)">
+
+                    <img src="{{ .IconURL }}" alt="" class="item-icon" onerror="this.src='/static/placeholder.svg'">
+
+                    <span>{{ .Name }} — {{ printf "%g" .Amount }} предм./мин</span>
+
+                    <span class="ingredient-hint">рецепт →</span>
+
+                </button>
+
+                {{ else }}
+
+                <div class="ingredient-static">
+
+                    <img src="{{ .IconURL }}" alt="" class="item-icon" onerror="this.src='/static/placeholder.svg'">
+
+                    <span>{{ .Name }} — {{ printf "%g" .Amount }} предм./мин</span>
+
+                </div>
+
+                {{ end }}
+
+                <div class="ingredient-chain-nest"></div>
+
+            </li>
+
+            {{ end }}
+
+        </ul>
+
+        </div>
+
+    </div>
+
+    {{ end }}
+
+
+
+    {{ if .Task.RecipeName }}
+
+    <div class="detail-block detail-block-production">
+
+        <p class="preview-label">План производства</p>
+
+        {{ template "task_production.html" .ProductionData }}
+
+    </div>
+
+    {{ end }}
+
+
+
+    <div class="detail-actions">
+
+        <form class="inline-form"
+
+              hx-post="/tasks/take/{{ .Task.ID }}"
+
+              hx-target="#task-detail"
+
+              hx-swap="innerHTML"
+
+              hx-on::after-request="refreshTaskList()">
+
+            <button type="submit" class="btn btn-primary btn-sm">Взять себе</button>
+
+        </form>
+
+
+
+        <form class="inline-form"
+
+              hx-post="/tasks/status/{{ .Task.ID }}"
+
+              hx-target="#task-detail"
+
+              hx-swap="innerHTML"
+
+              hx-on::after-request="refreshTaskList()">
+
+            <select name="status" onchange="htmx.trigger(this.closest('form'), 'submit')">
+
+                <option value="pending" {{ if eq .Task.Status "pending" }}selected{{ end }}>Ожидает</option>
+
+                <option value="in_progress" {{ if eq .Task.Status "in_progress" }}selected{{ end }}>В работе</option>
+
+                <option value="completed" {{ if eq .Task.Status "completed" }}selected{{ end }}>Выполнено</option>
+
+            </select>
+
+        </form>
+
+
+
+        <form class="inline-form"
+
+              hx-post="/tasks/assign/{{ .Task.ID }}"
+
+              hx-target="#task-detail"
+
+              hx-swap="innerHTML"
+
+              hx-on::after-request="refreshTaskList()">
+
+            <select name="assigned_to_user_id" onchange="htmx.trigger(this.closest('form'), 'submit')">
+
+                <option value="0">— Не назначено —</option>
+
+                {{ range .Users }}
+
+                <option value="{{ .ID }}" {{ if and $.Task.AssignedToUserID (eq $.Task.AssignedToUserID .ID) }}selected{{ end }}>{{ .Username }}</option>
+
+                {{ end }}
+
+            </select>
+
+        </form>
+
+
+
+        <button class="btn btn-danger btn-sm"
+
+                hx-delete="/tasks/delete/{{ .Task.ID }}"
+
+                hx-vals="js:{scope: currentTaskScope()}"
+
+                hx-target="#tasks-list"
+
+                hx-swap="innerHTML"
+
+                hx-on::after-request="document.getElementById('task-detail').innerHTML='<p class=hint>Задача удалена</p>'"
+
+                hx-confirm="Удалить задачу?">Удалить</button>
+
+    </div>
+
+</div>
+
+

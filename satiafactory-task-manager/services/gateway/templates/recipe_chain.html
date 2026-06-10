@@ -1,0 +1,95 @@
+<div class="recipe-chain-block" data-chain-key="{{ .ItemClass }}:{{ printf "%g" .Amount }}">
+    <input type="hidden" name="item" value="{{ .ItemClass }}">
+    <input type="hidden" name="amount" value="{{ printf "%g" .Amount }}">
+    <input type="hidden" name="depth" value="{{ .Depth }}">
+    <input type="hidden" name="recipe" value="{{ .SelectedRecipe }}">
+    <input type="hidden" name="root_total" value="{{ printf "%g" .RootTotalItems }}">
+    <input type="hidden" name="root_rate" value="{{ printf "%g" .RootRequiredRate }}">
+    <input type="hidden" name="shards" value="{{ .AvailableShards }}">
+
+    <div class="recipe-chain-head">
+        <img src="{{ .IconURL }}" alt="" class="item-icon" onerror="this.src='/static/placeholder.svg'">
+        <div class="recipe-chain-title">
+            <strong>{{ .ItemName }}</strong>
+            <span class="hint">{{ printf "%g" .Amount }} предм./мин</span>
+        </div>
+        <button type="button" class="btn-chain-done" onclick="toggleChainDone(this)">Выполнено</button>
+    </div>
+
+    {{ if .RawResource }}
+    <p class="hint chain-raw">Базовый ресурс — рецепта крафта нет (добывается или покупается).</p>
+    {{ else }}
+    <div class="chain-toolbar">
+        {{ if gt (len .RecipeOptions) 1 }}
+        <div class="chain-recipe-picker">
+            {{ range .RecipeOptions }}
+            <button type="button"
+                    class="chain-recipe-btn {{ if eq $.SelectedRecipe .ClassName }}active{{ end }}"
+                    hx-get="/recipes/chain"
+                    hx-include="closest .recipe-chain-block"
+                    hx-vals='{"recipe": "{{ .ClassName }}"}'
+                    hx-target="closest .recipe-chain-block"
+                    hx-swap="outerHTML">
+                {{ .DisplayName }}{{ if .IsAlternate }} <span class="badge badge-alt">альт.</span>{{ end }}
+            </button>
+            {{ end }}
+        </div>
+        {{ end }}
+        <label class="field-check field-check-sm">
+            <input type="checkbox" name="include_alternates" value="1"
+                   {{ if .IncludeAlternates }}checked{{ end }}
+                   hx-get="/recipes/chain"
+                   hx-include="closest .recipe-chain-block"
+                   hx-trigger="change"
+                   hx-target="closest .recipe-chain-block"
+                   hx-swap="outerHTML">
+            <span>Альтернативные рецепты</span>
+        </label>
+    </div>
+
+    <p class="preview-label">Рецепт: {{ .RecipeTitle }}{{ if .IsAlternate }} <span class="badge badge-alt">альтернатива</span>{{ end }}
+        {{ if .Duration }}<span class="hint">· {{ printf "%.1f" .Duration }} с / цикл</span>{{ end }}
+    </p>
+
+    {{ if .ProductionPlan }}
+    {{ template "production_plan.html" .ProductionPlan }}
+    {{ end }}
+
+    {{ if .Products }}
+    <p class="preview-label">Производится</p>
+    <ul class="resource-list compact">
+        {{ range .Products }}
+        <li>
+            <img src="{{ .IconURL }}" alt="" class="item-icon" onerror="this.src='/static/placeholder.svg'">
+            <span>{{ .Name }} — {{ printf "%g" .Amount }} предм./мин</span>
+        </li>
+        {{ end }}
+    </ul>
+    {{ end }}
+
+    {{ if .Ingredients }}
+    <p class="preview-label">Нужно для крафта</p>
+    <ul class="resource-list resource-list-chain compact">
+        {{ range .Ingredients }}
+        <li class="ingredient-row">
+            {{ if .Craftable }}
+            <button type="button" class="ingredient-link"
+                    data-chain-url="/recipes/chain?item={{ .Class }}&amount={{ printf "%g" .Amount }}&depth={{ add $.Depth 1 }}&root_total={{ printf "%g" $.RootTotalItems }}&root_rate={{ printf "%g" $.RootRequiredRate }}&shards={{ $.AvailableShards }}"
+                    onclick="toggleIngredientChain(this)">
+                <img src="{{ .IconURL }}" alt="" class="item-icon" onerror="this.src='/static/placeholder.svg'">
+                <span>{{ .Name }} — {{ printf "%g" .Amount }} предм./мин</span>
+                <span class="ingredient-hint">рецепт →</span>
+            </button>
+            {{ else }}
+            <div class="ingredient-static">
+                <img src="{{ .IconURL }}" alt="" class="item-icon" onerror="this.src='/static/placeholder.svg'">
+                <span>{{ .Name }} — {{ printf "%g" .Amount }} предм./мин</span>
+            </div>
+            {{ end }}
+            <div class="ingredient-chain-nest"></div>
+        </li>
+        {{ end }}
+    </ul>
+    {{ end }}
+    {{ end }}
+</div>

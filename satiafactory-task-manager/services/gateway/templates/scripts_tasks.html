@@ -1,0 +1,209 @@
+{{ define "tasks_scripts" }}
+<script>
+function selectRecipe(className, displayName) {
+    document.getElementById('recipe-class').value = className;
+    const title = document.getElementById('task-title');
+    if (title && !title.value.trim()) {
+        title.value = displayName;
+    }
+    const results = document.getElementById('recipe-results');
+    if (results) {
+        results.innerHTML =
+            '<p class="hint selected-recipe">Выбран: <strong>' + displayName + '</strong></p>';
+    }
+    const preview = document.getElementById('recipe-preview');
+    if (preview) {
+        htmx.ajax('GET', '/recipes/preview?recipe=' + encodeURIComponent(className) +
+            '&amount=' + encodeURIComponent((document.getElementById('target-amount') || {}).value || 1),
+            {target: '#recipe-preview', swap: 'innerHTML'});
+    }
+}
+
+function selectUser(id, name) {
+    const uid = document.getElementById('assigned-user-id');
+    const sel = document.getElementById('selected-user');
+    const results = document.getElementById('user-results');
+    if (uid) uid.value = id;
+    if (sel) sel.innerHTML = 'Исполнитель: <strong>' + name + '</strong>';
+    if (results) results.innerHTML = '';
+}
+
+function currentTaskScope() {
+    const el = document.getElementById('task-scope');
+    return el ? (el.value || 'all') : 'all';
+}
+
+function refreshTaskList() {
+    const scope = currentTaskScope();
+    const list = document.getElementById('tasks-list');
+    if (list) {
+        htmx.ajax('GET', '/tasks?scope=' + scope, {target: '#tasks-list', swap: 'innerHTML'});
+    }
+}
+
+function switchTaskTab(scope) {
+    const scopeEl = document.getElementById('task-scope');
+    const list = document.getElementById('tasks-list');
+    if (scopeEl) scopeEl.value = scope;
+    if (list) list.dataset.scope = scope;
+    const tabAll = document.getElementById('tab-all');
+    const tabMine = document.getElementById('tab-mine');
+    const tabCompleted = document.getElementById('tab-completed');
+    if (tabAll) tabAll.classList.toggle('active', scope === 'all');
+    if (tabMine) tabMine.classList.toggle('active', scope === 'mine');
+    if (tabCompleted) tabCompleted.classList.toggle('active', scope === 'completed');
+    const hint = document.getElementById('tasks-hint');
+    if (hint) {
+        const hints = {
+            all: 'Активные задачи команды. Нажмите на задачу для подробностей.',
+            mine: 'Ваши активные задачи (назначенные на вас).',
+            completed: 'Выполненные задачи команды.'
+        };
+        hint.textContent = hints[scope] || hints.all;
+    }
+    refreshTaskList();
+}
+
+function activeTaskId() {
+    const panel = document.getElementById('task-detail');
+    const detail = panel && panel.querySelector('.task-detail[data-task-id]');
+    return detail ? detail.dataset.taskId : (panel ? panel.dataset.taskId : '');
+}
+
+function chainProgressStore(taskId) {
+    return 'chain-progress-' + taskId;
+}
+
+function loadChainProgress(taskId) {
+    if (!taskId) return {};
+    try {
+        return JSON.parse(sessionStorage.getItem(chainProgressStore(taskId)) || '{}');
+    } catch (_) {
+        return {};
+    }
+}
+
+function saveChainProgress(taskId, data) {
+    if (!taskId) return;
+    sessionStorage.setItem(chainProgressStore(taskId), JSON.stringify(data));
+}
+
+function applyChainDoneState(root) {
+    const taskId = activeTaskId();
+    if (!taskId || !root) return;
+    const progress = loadChainProgress(taskId);
+    root.querySelectorAll('.recipe-chain-block[data-chain-key]').forEach(function(block) {
+        const key = block.dataset.chainKey;
+        const done = !!progress[key];
+        block.classList.toggle('chain-done', done);
+        const btn = block.querySelector('.btn-chain-done');
+        if (btn) {
+            btn.classList.toggle('active', done);
+            btn.textContent = done ? '✓ Готово' : 'Выполнено';
+        }
+        const row = block.closest('.ingredient-row');
+        const link = row && row.querySelector('.ingredient-link');
+        if (link) link.classList.toggle('chain-done', done);
+    });
+}
+
+function restoreChainProgress() {
+    applyChainDoneState(document.getElementById('task-detail'));
+}
+
+function chainHint(link, expanded) {
+    const hint = link && link.querySelector('.ingredient-hint');
+    if (hint) hint.textContent = expanded ? 'свернуть ↑' : 'рецепт →';
+}
+
+function collapseChainNests(root) {
+    if (!root) return;
+    root.querySelectorAll('.ingredient-chain-nest').forEach(function(nest) {
+        nest.innerHTML = '';
+    });
+    root.querySelectorAll('.ingredient-link.chain-expanded').forEach(function(link) {
+        link.classList.remove('chain-expanded');
+        chainHint(link, false);
+    });
+}
+
+function toggleIngredientChain(btn) {
+    const row = btn.closest('.ingredient-row');
+    if (!row) return;
+    const nest = row.querySelector('.ingredient-chain-nest');
+    if (!nest) return;
+
+    if (btn.classList.contains('chain-expanded')) {
+        nest.innerHTML = '';
+        btn.classList.remove('chain-expanded');
+        chainHint(btn, false);
+        return;
+    }
+
+    let url = btn.dataset.chainUrl;
+    if (!url) return;
+    const shardInput = document.getElementById('shard-input');
+    if (shardInput) {
+        const u = new URL(url, window.location.origin);
+        u.searchParams.set('shards', shardInput.value || '0');
+        url = u.pathname + u.search;
+    }
+    btn.classList.add('chain-expanded');
+    chainHint(btn, true);
+    htmx.ajax('GET', url, {target: nest, swap: 'innerHTML'});
+}
+
+function toggleChainReverse(btn) {
+    const forward = document.getElementById('chain-forward-view');
+    const reverse = document.getElementById('chain-reverse-view');
+    if (!forward || !reverse) return;
+
+    const isReverse = btn.dataset.mode === 'reverse';
+    if (isReverse) {
+        forward.hidden = false;
+        reverse.hidden = true;
+        reverse.innerHTML = '';
+        btn.textContent = 'Рецепт задом наперёд';
+        btn.dataset.mode = 'forward';
+        btn.classList.remove('active');
+        return;
+    }
+
+    forward.hidden = true;
+    reverse.hidden = false;
+    btn.textContent = 'Обычный рецепт';
+    btn.dataset.mode = 'reverse';
+    btn.classList.add('active');
+    const url = '/recipes/chain-reverse?recipe=' + encodeURIComponent(btn.dataset.recipe) +
+        '&amount=' + encodeURIComponent(btn.dataset.amount);
+    htmx.ajax('GET', url, {target: '#chain-reverse-view', swap: 'innerHTML'});
+}
+
+function toggleChainDone(btn) {
+    const block = btn.closest('.recipe-chain-block');
+    if (!block) return;
+    const taskId = activeTaskId();
+    const key = block.dataset.chainKey;
+    if (!taskId || !key) return;
+    const progress = loadChainProgress(taskId);
+    const next = !progress[key];
+    if (next) {
+        progress[key] = true;
+        collapseChainNests(block);
+    } else {
+        delete progress[key];
+    }
+    saveChainProgress(taskId, progress);
+    applyChainDoneState(document.getElementById('task-detail'));
+}
+
+document.body.addEventListener('htmx:afterSwap', function(evt) {
+    const target = evt.detail.target;
+    if (!target) return;
+    if (target.id === 'task-detail' || target.id === 'chain-reverse-view' ||
+        (target.closest && target.closest('#task-detail'))) {
+        restoreChainProgress();
+    }
+});
+</script>
+{{ end }}

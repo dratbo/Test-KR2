@@ -1,0 +1,62 @@
+{{ if . }}
+<div class="factory-plan-body">
+    {{ if .Steps }}
+    <p class="preview-label">Постройки для производства</p>
+    <ul class="factory-step-list">
+        {{ range .Steps }}
+        <li>
+            <strong>{{ .BuildingName }}</strong>
+            <span class="hint">для {{ .ItemName }} — {{ .Chosen.TotalMachines }} шт.</span>
+            {{ if .Chosen.Slots }}
+            <ul class="production-slot-list">
+                {{ range .Chosen.Slots }}
+                <li>
+                    {{ .Count }}×
+                    {{ if gt .Shards 0 }}({{ .Shards }} энергомод., {{ .ClockPercent }}%){{ else }}(100%){{ end }}
+                    — {{ printf "%g" .RatePerMachine }} предм./мин
+                </li>
+                {{ end }}
+            </ul>
+            {{ end }}
+        </li>
+        {{ end }}
+    </ul>
+    <p class="hint">Всего построек: <strong>{{ .TotalBuildings }}</strong></p>
+    {{ end }}
+
+    {{ if .BuildingCosts }}
+    <div class="build-costs-block">
+        <p class="preview-label">Ресурсы на постройку</p>
+        {{ range .BuildingCosts }}
+        <div class="build-cost-row">
+            <p class="build-cost-title"><strong>{{ .BuildingName }}</strong> × {{ .Count }}</p>
+            {{ if .Materials }}
+            <ul class="resource-list compact">
+                {{ range .Materials }}
+                <li>
+                    <img src="{{ .IconURL }}" alt="" class="item-icon" onerror="this.src='/static/placeholder.svg'">
+                    <span>{{ .DisplayName }} × {{ printf "%g" .Amount }}</span>
+                </li>
+                {{ end }}
+            </ul>
+            {{ else }}
+            <p class="hint">Рецепт постройки не найден в базе.</p>
+            {{ end }}
+        </div>
+        {{ end }}
+
+        {{ if .TotalMaterials }}
+        <p class="preview-label">Итого на все постройки</p>
+        <ul class="resource-list">
+            {{ range .TotalMaterials }}
+            <li>
+                <img src="{{ .IconURL }}" alt="" class="item-icon" onerror="this.src='/static/placeholder.svg'">
+                <span>{{ .DisplayName }} × {{ printf "%g" .Amount }}</span>
+            </li>
+            {{ end }}
+        </ul>
+        {{ end }}
+    </div>
+    {{ end }}
+</div>
+{{ end }}

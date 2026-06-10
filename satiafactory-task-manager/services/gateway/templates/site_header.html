@@ -1,0 +1,15 @@
+{{ define "site_header" }}
+<header class="topbar">
+    <div class="topbar-start">
+        <div class="brand">
+            <span class="brand-icon">⚙</span>
+            <span>Satisfactory Task Manager</span>
+        </div>
+        <nav class="topbar-nav">
+            <a href="/" class="nav-link{{ if eq .Nav "home" }} active{{ end }}">Основная страница</a>
+            <a href="/my-tasks" class="nav-link{{ if eq .Nav "my-tasks" }} active{{ end }}">Мои задачи</a>
+        </nav>
+    </div>
+    <a class="btn btn-ghost" href="/logout">Выйти</a>
+</header>
+{{ end }}

@@ -7,4 +7,4 @@ CREATE TABLE IF NOT EXISTS tasks (
                                      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );
 
-CREATE INDEX idx_tasks_user_id ON tasks(user_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_user_id ON tasks(user_id);

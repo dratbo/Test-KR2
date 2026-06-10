@@ -3,6 +3,7 @@ package models
 type Recipe struct {
 	ClassName                 string       `json:"class_name"`
 	DisplayName               string       `json:"display_name"`
+	DisplayNameRU             string       `json:"display_name_ru,omitempty"`
 	Ingredients               []Ingredient `json:"ingredients"`
 	Products                  []Product    `json:"products"`
 	ProducedIn                []string     `json:"produced_in"`
