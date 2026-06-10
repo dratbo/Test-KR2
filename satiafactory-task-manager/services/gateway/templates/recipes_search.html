@@ -1,6 +1,6 @@
-{{ if . }}
+{{ if .Rows }}
 <div class="recipe-picker">
-    {{ range . }}
+    {{ range .Rows }}
     <button type="button" class="recipe-option recipe-option-lg"
             data-class="{{ .ClassName }}" data-name="{{ .DisplayName }}"
             onclick="selectRecipe(this.dataset.class, this.dataset.name)">
@@ -15,5 +15,5 @@
     {{ end }}
 </div>
 {{ else }}
-<p class="hint">Ничего не найдено. Попробуйте: iron plate, железная пластина, circuit board…</p>
+<p class="hint">{{ if .EmptyHint }}{{ .EmptyHint }}{{ else }}Ничего не найдено. Попробуйте: iron plate, железная пластина, circuit board…{{ end }}</p>
 {{ end }}

@@ -127,7 +127,7 @@ services:
     environment:
       DATA_SERVICE_PORT: "8083"
       DATABASE_URL: postgres://dratbo:P@ssw0rd@postgres:5432/satisfactory?sslmode=disable
-      DATA_FILE_PATH: ./data/Docs.json
+      DATA_FILE_PATH: ./data/game-data.json
     ports:
       - "8083:8083"
     volumes:

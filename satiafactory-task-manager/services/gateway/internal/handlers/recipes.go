@@ -63,6 +63,11 @@ type recipeSearchRow struct {
 	IsAlternate   bool
 }
 
+type recipeSearchData struct {
+	Rows      []recipeSearchRow
+	EmptyHint string
+}
+
 func (h *RecipeHandler) Search(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
 	if len(q) < 2 {
@@ -70,6 +75,13 @@ func (h *RecipeHandler) Search(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`<p class="hint">Введите минимум 2 символа для поиска рецепта…</p>`))
 		return
 	}
+
+	hubTier, _ := strconv.Atoi(r.URL.Query().Get("hub_tier"))
+	if hubTier <= 0 {
+		hubTier = 9
+	}
+	unlockIndex, _ := h.dataClient.GetUnlockIndex()
+	tierCtx := production.NewTierContext(hubTier, unlockIndex)
 
 	includeAlternates := r.URL.Query().Get("include_alternates") == "1" || r.URL.Query().Get("include_alternates") == "on"
 	recipes, err := h.dataClient.SearchRecipes(q, includeAlternates)
@@ -80,6 +92,9 @@ func (h *RecipeHandler) Search(w http.ResponseWriter, r *http.Request) {
 
 	rows := make([]recipeSearchRow, 0, len(recipes))
 	for _, rec := range recipes {
+		if !tierCtx.RecipeUnlocked(rec.ClassName) {
+			continue
+		}
 		title := rec.DisplayName
 		englishName := ""
 		if rec.DisplayNameRU != "" {
@@ -94,14 +109,22 @@ func (h *RecipeHandler) Search(w http.ResponseWriter, r *http.Request) {
 			IsAlternate:   strings.Contains(rec.ClassName, "Alternate") || strings.HasPrefix(rec.DisplayName, "Alternate:"),
 		}
 		if len(rec.Products) > 0 {
+			if production.IsExtractedResource(rec.Products[0].ItemClassName) {
+				continue
+			}
 			row.ProductName = rec.Products[0].ItemClassName
 			row.IconURL = clients.ItemIconURL(rec.Products[0].ItemClassName)
 		}
 		rows = append(rows, row)
 	}
 
+	data := recipeSearchData{Rows: rows}
+	if len(rows) == 0 {
+		data.EmptyHint = "Для " + production.HubTierLabel(hubTier) + " нет доступных рецептов по запросу «" + q + "». Выберите более высокий тир HUB."
+	}
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_ = h.searchTmpl.Execute(w, rows)
+	_ = h.searchTmpl.Execute(w, data)
 }
 
 type ingredientRow struct {
@@ -137,7 +160,9 @@ type recipeChainData struct {
 	ProductionPlan    *production.StepPlan
 	RootTotalItems    float64
 	RootRequiredRate  float64
+	RootRecipeClass   string
 	AvailableShards   int
+	HubTier           int
 }
 
 type recipePreviewData struct {
@@ -227,6 +252,11 @@ func (h *RecipeHandler) Chain(w http.ResponseWriter, r *http.Request) {
 	rootTotal, _ := strconv.ParseFloat(r.URL.Query().Get("root_total"), 64)
 	rootRate, _ := strconv.ParseFloat(r.URL.Query().Get("root_rate"), 64)
 	shards := parseShardCount(r)
+	hubTier, _ := strconv.Atoi(firstNonEmpty(r.URL.Query().Get("hub_tier"), r.FormValue("hub_tier")))
+	if hubTier <= 0 {
+		hubTier = 9
+	}
+	rootRecipe := strings.TrimSpace(firstNonEmpty(r.URL.Query().Get("root_recipe"), r.FormValue("root_recipe")))
 
 	itemName := itemDisplayName(h.dataClient, itemClass)
 
@@ -240,16 +270,19 @@ func (h *RecipeHandler) Chain(w http.ResponseWriter, r *http.Request) {
 		SelectedRecipe:    selectedRecipe,
 		RootTotalItems:    rootTotal,
 		RootRequiredRate:  rootRate,
+		RootRecipeClass:   rootRecipe,
 		AvailableShards:   shards,
+		HubTier:           hubTier,
+	}
+
+	if production.IsExtractedResource(itemClass) {
+		h.renderExtractedChain(w, &data, itemClass, itemName, amount, rootRecipe, rootRate, shards, hubTier)
+		return
 	}
 
 	recipes, err := h.dataClient.GetRecipesByProduct(itemClass, includeAlternates)
 	if err != nil || len(recipes) == 0 {
-		data.RawResource = true
-		ctx := loadProductionContext(h.dataClient, data.RootTotalItems, data.RootRequiredRate, shards)
-		data.ProductionPlan = ctx.planForRecipe(itemClass, itemName, amount, nil, true, shards)
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = h.chainTmpl.Execute(w, data)
+		h.renderExtractedChain(w, &data, itemClass, itemName, amount, rootRecipe, rootRate, shards, hubTier)
 		return
 	}
 
@@ -283,13 +316,12 @@ func (h *RecipeHandler) Chain(w http.ResponseWriter, r *http.Request) {
 	data.SelectedRecipe = recipe.ClassName
 
 	for _, ing := range recipe.Ingredients {
-		craftable, _ := h.dataClient.HasRecipeForProduct(ing.ItemClassName)
 		data.Ingredients = append(data.Ingredients, ingredientRow{
 			Name:      itemDisplayName(h.dataClient, ing.ItemClassName),
 			Class:     ing.ItemClassName,
 			Amount:    ingredientRatePerMin(recipe, amount, ing.Amount),
 			IconURL:   clients.ItemIconURL(ing.ItemClassName),
-			Craftable: craftable,
+			Craftable: ingredientCraftable(h.dataClient, ing.ItemClassName),
 		})
 	}
 	for _, prod := range recipe.Products {
@@ -301,8 +333,9 @@ func (h *RecipeHandler) Chain(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	ctx := loadProductionContext(h.dataClient, data.RootTotalItems, data.RootRequiredRate, shards)
-	data.ProductionPlan = ctx.planForRecipe(itemClass, itemName, amount, recipe, false, shards)
+	shardBudget := shardBudgetForChainItem(h.dataClient, rootRecipe, rootRate, shards, hubTier, itemClass, recipe.ClassName, false)
+	ctx := loadProductionContext(h.dataClient, data.RootTotalItems, data.RootRequiredRate, shards, hubTier, production.LogisticsParams{})
+	data.ProductionPlan = ctx.planForRecipe(itemClass, itemName, amount, recipe, false, shardBudget)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_ = h.chainTmpl.Execute(w, data)
@@ -342,7 +375,16 @@ type reverseChainData struct {
 
 const maxChainTreeDepth = 14
 
-func (h *RecipeHandler) buildChainTree(itemClass string, amount float64, depth int) *chainTreeNode {
+func (h *RecipeHandler) renderExtractedChain(w http.ResponseWriter, data *recipeChainData, itemClass, itemName string, amount float64, rootRecipe string, rootRate float64, shards, hubTier int) {
+	data.RawResource = true
+	shardBudget := shardBudgetForChainItem(h.dataClient, rootRecipe, rootRate, shards, hubTier, itemClass, "", true)
+	ctx := loadProductionContext(h.dataClient, data.RootTotalItems, data.RootRequiredRate, shards, hubTier, production.LogisticsParams{})
+	data.ProductionPlan = ctx.planForRecipe(itemClass, itemName, amount, nil, true, shardBudget)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = h.chainTmpl.Execute(w, data)
+}
+
+func (h *RecipeHandler) buildChainTree(cache *recipeLookupCache, tier *production.TierContext, itemClass string, amount float64, depth int, preferredRecipe *clients.Recipe) *chainTreeNode {
 	node := &chainTreeNode{
 		ItemClass: itemClass,
 		Amount:    amount,
@@ -353,17 +395,27 @@ func (h *RecipeHandler) buildChainTree(itemClass string, amount float64, depth i
 		node.RawResource = true
 		return node
 	}
-	recipes, err := h.dataClient.GetRecipesByProduct(itemClass, false)
-	if err != nil || len(recipes) == 0 {
+	if production.IsExtractedResource(itemClass) {
 		node.RawResource = true
 		return node
 	}
-	recipe := &recipes[0]
+
+	var recipe *clients.Recipe
+	if preferredRecipe != nil {
+		recipe = preferredRecipe
+	} else {
+		recipes, err := cache.recipesByProduct(itemClass)
+		if err != nil || len(recipes) == 0 {
+			node.RawResource = true
+			return node
+		}
+		recipe = production.PickChainRecipeWithTier(recipes, tier)
+	}
 	node.RecipeTitle = recipeDisplayTitle(recipe)
 	prodPerCycle := recipeProductPerCycle(recipe)
 	for _, ing := range recipe.Ingredients {
 		childRate := round2(amount * ing.Amount / prodPerCycle)
-		child := h.buildChainTree(ing.ItemClassName, childRate, depth+1)
+		child := h.buildChainTree(cache, tier, ing.ItemClassName, childRate, depth+1, nil)
 		node.Children = append(node.Children, child)
 	}
 	return node
@@ -442,7 +494,14 @@ func (h *RecipeHandler) ChainReverse(w http.ResponseWriter, r *http.Request) {
 	}
 
 	prod := recipe.Products[0]
-	root := h.buildChainTree(prod.ItemClassName, productRatePerMin(recipe, amount, prod.Amount), 0)
+	hubTier, _ := strconv.Atoi(r.URL.Query().Get("hub_tier"))
+	if hubTier <= 0 {
+		hubTier = 9
+	}
+	unlockIndex, _ := h.dataClient.GetUnlockIndex()
+	tierCtx := production.NewTierContext(hubTier, unlockIndex)
+	cache := newRecipeLookupCache(h.dataClient)
+	root := h.buildChainTree(cache, tierCtx, prod.ItemClassName, productRatePerMin(recipe, amount, prod.Amount), 0, recipe)
 	maxTier := assignChainTiers(root)
 
 	tierMap := map[int]map[string]*reverseChainItem{}

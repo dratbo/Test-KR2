@@ -15,7 +15,13 @@
         <h1>Мои задачи</h1>
         <input type="hidden" id="task-scope" name="task_scope" value="mine">
         <p class="hint" id="tasks-hint">Задачи, назначенные на вас. Нажмите для подробностей.</p>
-        <div id="tasks-list" class="tasks-list tasks-list-compact" data-scope="mine"
+        <div class="tasks-toolbar">
+            <input type="search" id="tasks-search" class="tasks-search-input"
+                   placeholder="Поиск: название, рецепт…"
+                   autocomplete="off"
+                   oninput="onTasksSearchInput()">
+        </div>
+        <div id="tasks-list" class="tasks-list tasks-list-compact" data-scope="mine" data-page="1"
              hx-get="/tasks?scope=mine" hx-trigger="load" hx-swap="innerHTML">
             <p class="hint">Загрузка…</p>
         </div>

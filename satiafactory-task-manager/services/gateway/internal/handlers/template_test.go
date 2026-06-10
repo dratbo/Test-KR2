@@ -59,10 +59,15 @@ func TestTaskDetailTemplateRendersIngredients(t *testing.T) {
 			},
 		},
 		ProductionData: taskProductionData{
-			TaskID:          1,
-			AvailableShards: 0,
-			FactoryPlan:     plan,
-			ProductionPlan:  stepPlan,
+			TaskID:             1,
+			HubTier:            9,
+			HubTierLabel:       "Тир HUB 9",
+			AvailableShards:    0,
+			ConveyorMk:         3,
+			PipeMk:             1,
+			ShowFactoryDetails: true,
+			FactoryPlan:        plan,
+			ProductionPlan:     stepPlan,
 		},
 	}
 

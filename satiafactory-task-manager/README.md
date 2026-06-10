@@ -76,18 +76,20 @@ docker compose -f docker-compose.balance.yml down
 
 ## Рецепты Satisfactory
 
-Сервис `satisfactory-data-service` при первом запуске импортирует `services/satisfactory-data-service/data/Docs.json` в PostgreSQL.
+Сервис `satisfactory-data-service` при первом запуске импортирует `services/satisfactory-data-service/data/game-data.json` (данные Satisfactory **v1.0**, источник — [SatisfactoryTools](https://github.com/greeny/SatisfactoryTools)) в PostgreSQL.
 
 На странице «Мои задачи»:
 1. Введите название рецепта в поле поиска (минимум 2 символа).
 2. Выберите рецепт — появится превью ингредиентов и иконки (из [SatisfactoryTools](https://github.com/greeny/SatisfactoryTools)).
 3. Укажите количество партий и создайте задачу — в карточке задачи отобразится, что нужно для крафта.
 
-Ручной импорт (если нужно обновить данные):
+Ручной импорт (перезаписывает рецепты, предметы и постройки в БД):
 
 ```powershell
 docker compose -f docker-compose.balance.yml run --rm satisfactory-data-service ./data-service -import
 ```
+
+Старый формат `Docs.json` (Update 8) по-прежнему поддерживается — укажите `DATA_FILE_PATH=./data/Docs.json`.
 
 ## Дальше для «нагруженной» работы (по требованию преподавателя)
 

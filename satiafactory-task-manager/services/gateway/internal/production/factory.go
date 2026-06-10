@@ -7,6 +7,7 @@ type FactoryStep struct {
 	BuildingClass string
 	Plan          *StepPlan
 	Chosen        *Scenario
+	BeltLines     int
 }
 
 // FactoryPlan is the full production and construction plan for a task.

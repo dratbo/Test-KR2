@@ -14,7 +14,7 @@ func Load() *Config {
 	return &Config{
 		Port:         getEnv("DATA_SERVICE_PORT", "8083"),
 		DatabaseURL:  getEnv("DATABASE_URL", "postgres://dratbo:P@ssw0rd@localhost:5432/satisfactory?sslmode=disable"),
-		DataFilePath: getEnv("DATA_FILE_PATH", "./data/Docs.json"),
+		DataFilePath: getEnv("DATA_FILE_PATH", "./data/game-data.json"),
 	}
 }
 

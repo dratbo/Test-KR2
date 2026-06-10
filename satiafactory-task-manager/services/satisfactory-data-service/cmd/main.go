@@ -31,8 +31,8 @@ func main() {
 	i18n.Load("./data/ru_names.json")
 
 	if *importFlag {
-		log.Println("Starting import...")
-		if err := parser.RunParser(db, cfg.DataFilePath); err != nil {
+		log.Println("Starting import from", cfg.DataFilePath, "...")
+		if err := parser.RunImport(db, cfg.DataFilePath); err != nil {
 			log.Fatal("Import failed:", err)
 		}
 		log.Println("Import completed successfully")
@@ -45,8 +45,8 @@ func main() {
 		log.Fatal("recipe count:", err)
 	}
 	if count == 0 {
-		log.Println("Database empty, importing Docs.json (first run may take a few minutes)...")
-		if err := parser.RunParser(db, cfg.DataFilePath); err != nil {
+		log.Printf("Database empty, importing game data from %s...", cfg.DataFilePath)
+		if err := parser.RunImport(db, cfg.DataFilePath); err != nil {
 			log.Fatal("Auto-import failed:", err)
 		}
 	} else {
@@ -61,6 +61,8 @@ func main() {
 	itemHandler := handlers.NewItemHandler(itemRepo)
 	recipeHandler := handlers.NewRecipeHandler(recipeRepo)
 	buildingHandler := handlers.NewBuildingHandler(buildingRepo)
+	unlockRepo := repository.NewUnlockRepository(db)
+	unlockHandler := handlers.NewUnlockHandler(unlockRepo)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/items", itemHandler.ListItems)
@@ -71,6 +73,7 @@ func main() {
 	mux.HandleFunc("GET /api/recipes/has-product/{className}", recipeHandler.HasRecipeForProduct)
 	mux.HandleFunc("GET /api/recipes/{className}", recipeHandler.GetRecipe)
 	mux.HandleFunc("GET /api/buildings", buildingHandler.ListBuildings)
+	mux.HandleFunc("GET /api/unlocks", unlockHandler.GetIndex)
 
 	log.Printf("Satisfactory Data Service running on port %s", cfg.Port)
 	log.Fatal(http.ListenAndServe(":"+cfg.Port, mux))

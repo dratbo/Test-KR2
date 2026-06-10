@@ -1,4 +1,4 @@
-<div class="task-detail" data-task-id="{{ .Task.ID }}">
+<div class="task-detail" data-task-id="{{ .Task.ID }}" data-hub-tier="{{ .Task.HubTier }}">
 
     <div class="task-detail-head">
 
@@ -43,6 +43,8 @@
         <p><strong>{{ .Task.RecipeName }}</strong> — {{ printf "%g" .Task.TargetAmount }} предм./мин
 
         {{ if .Task.Duration }}<span class="hint">({{ printf "%.1f" .Task.Duration }} с / цикл)</span>{{ end }}</p>
+
+        <p class="hint">{{ .Task.HubTierLabel }} — в расчёте учитываются только разблокированные постройки.</p>
 
     </div>
 
@@ -96,6 +98,8 @@
 
                     data-amount="{{ printf "%g" .Task.TargetAmount }}"
 
+                    data-hub-tier="{{ .Task.HubTier }}"
+
                     data-mode="forward"
 
                     onclick="toggleChainReverse(this)">Рецепт задом наперёд</button>
@@ -118,7 +122,7 @@
 
                 <button type="button" class="ingredient-link"
 
-                        data-chain-url="/recipes/chain?item={{ .Class }}&amount={{ printf "%g" .Amount }}&depth=1&root_total={{ printf "%g" $.Task.RootTotalItems }}&root_rate={{ printf "%g" $.Task.RootRequiredRate }}&shards={{ $.ProductionData.AvailableShards }}"
+                        data-chain-url="/recipes/chain?item={{ .Class }}&amount={{ printf "%g" .Amount }}&depth=1&root_total={{ printf "%g" $.Task.RootTotalItems }}&root_rate={{ printf "%g" $.Task.RootRequiredRate }}&shards={{ $.ProductionData.AvailableShards }}&hub_tier={{ $.Task.HubTier }}&root_recipe={{ $.Task.TargetItemClassName }}"
 
                         onclick="toggleIngredientChain(this)">
 
@@ -159,6 +163,48 @@
 
 
     {{ if .Task.RecipeName }}
+
+    <div class="detail-block">
+
+        <p class="preview-label">Тир прогресса</p>
+
+        <form class="inline-form tier-form"
+
+              hx-post="/tasks/tier/{{ .Task.ID }}"
+
+              hx-target="#task-detail"
+
+              hx-swap="innerHTML"
+
+              hx-on::after-request="refreshTaskList()">
+
+            <select name="hub_tier" onchange="htmx.trigger(this.closest('form'), 'submit')">
+
+                <option value="9" {{ if eq .Task.HubTier 9 }}selected{{ end }}>Тир 9 — Космическая программа</option>
+
+                <option value="8" {{ if eq .Task.HubTier 8 }}selected{{ end }}>Тир 8 — Ядерная программа</option>
+
+                <option value="7" {{ if eq .Task.HubTier 7 }}selected{{ end }}>Тир 7 — Алюминий</option>
+
+                <option value="6" {{ if eq .Task.HubTier 6 }}selected{{ end }}>Тир 6 — Платформа</option>
+
+                <option value="5" {{ if eq .Task.HubTier 5 }}selected{{ end }}>Тир 5 — Промышленность</option>
+
+                <option value="4" {{ if eq .Task.HubTier 4 }}selected{{ end }}>Тир 4 — Сталь</option>
+
+                <option value="3" {{ if eq .Task.HubTier 3 }}selected{{ end }}>Тир 3 — Угольная энергия</option>
+
+                <option value="2" {{ if eq .Task.HubTier 2 }}selected{{ end }}>Тир 2 — Кварц</option>
+
+                <option value="1" {{ if eq .Task.HubTier 1 }}selected{{ end }}>Тир 1 — Основы</option>
+
+            </select>
+
+        </form>
+
+    </div>
+
+
 
     <div class="detail-block detail-block-production">
 

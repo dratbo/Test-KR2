@@ -20,13 +20,14 @@ func (r *SchematicRepository) Insert(schematic *models.Schematic) error {
 	}
 	defer tx.Rollback()
 
-	query := `INSERT INTO schematics (class_name, display_name, description, schematic_type, time_to_complete)
-	          VALUES ($1, $2, $3, $4, $5) ON CONFLICT (class_name) DO UPDATE SET
+	query := `INSERT INTO schematics (class_name, display_name, description, schematic_type, hub_tier, time_to_complete)
+	          VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (class_name) DO UPDATE SET
 	              display_name = EXCLUDED.display_name,
 	              description = EXCLUDED.description,
 	              schematic_type = EXCLUDED.schematic_type,
+	              hub_tier = EXCLUDED.hub_tier,
 	              time_to_complete = EXCLUDED.time_to_complete`
-	_, err = tx.Exec(query, schematic.ClassName, schematic.DisplayName, schematic.Description, schematic.SchematicType, schematic.TimeToComplete)
+	_, err = tx.Exec(query, schematic.ClassName, schematic.DisplayName, schematic.Description, schematic.SchematicType, schematic.HubTier, schematic.TimeToComplete)
 	if err != nil {
 		return err
 	}

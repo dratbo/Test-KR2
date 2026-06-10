@@ -17,7 +17,7 @@
                 </div>
             </div>
             <button class="btn btn-danger btn-sm"
-                    hx-delete="/tasks/delete/{{ .ID }}?scope={{ $.Scope }}"
+                    hx-delete="/tasks/delete/{{ .ID }}?scope={{ $.Scope }}{{ if $.Query }}&q={{ queryEscape $.Query }}{{ end }}&page={{ $.Page }}"
                     hx-target="#tasks-list"
                     hx-swap="innerHTML"
                     hx-confirm="Удалить задачу?"
@@ -29,9 +29,22 @@
     </article>
     {{ end }}
 </div>
+{{ if gt .TotalPages 1 }}
+<nav class="tasks-pagination" aria-label="Страницы задач">
+    <button type="button" class="btn btn-ghost btn-sm tasks-page-btn"
+            onclick="switchTasksPage({{ sub .Page 1 }})"
+            {{ if not .HasPrev }}disabled{{ end }}>← Назад</button>
+    <span class="hint tasks-page-info">{{ .Page }} / {{ .TotalPages }} · всего {{ .TotalCount }}</span>
+    <button type="button" class="btn btn-ghost btn-sm tasks-page-btn"
+            onclick="switchTasksPage({{ add .Page 1 }})"
+            {{ if not .HasNext }}disabled{{ end }}>Вперёд →</button>
+</nav>
+{{ end }}
 {{ else }}
 <p class="hint empty-state">
-    {{ if eq .Scope "mine" }}
+    {{ if .Query }}
+    Ничего не найдено по запросу «{{ .Query }}».
+    {{ else if eq .Scope "mine" }}
     У вас пока нет активных назначенных задач.
     {{ else if eq .Scope "completed" }}
     Выполненных задач пока нет.

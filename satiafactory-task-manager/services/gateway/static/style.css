@@ -912,6 +912,20 @@ textarea {
     margin-bottom: 12px;
 }
 
+.factory-plan-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.factory-plan-section-body {
+    padding: 0 12px 12px;
+}
+
+.factory-plan-section .factory-step-list {
+    margin: 0;
+}
+
 .factory-plan-toolbar {
     display: flex;
     flex-wrap: wrap;
@@ -1087,6 +1101,45 @@ textarea {
     background: rgba(250, 149, 73, 0.15);
     border-color: var(--accent);
     color: var(--accent);
+}
+
+.tasks-toolbar {
+    margin-bottom: 10px;
+}
+
+.tasks-search-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #0f1419;
+    color: var(--text);
+    font-size: 0.9rem;
+}
+
+.tasks-search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.tasks-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+
+.tasks-page-info {
+    margin: 0;
+    white-space: nowrap;
+}
+
+.tasks-page-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 .tasks-list {

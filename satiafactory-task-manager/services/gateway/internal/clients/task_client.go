@@ -31,6 +31,10 @@ type Task struct {
 	CreatedAt           string  `json:"created_at"`
 	TargetItemClassName string  `json:"target_item_class_name,omitempty"`
 	TargetAmount        float64 `json:"target_amount,omitempty"`
+	HubTier             int     `json:"hub_tier,omitempty"`
+	ProductionShards    int     `json:"production_shards,omitempty"`
+	ConveyorMk          int     `json:"conveyor_mk,omitempty"`
+	PipeMk              int     `json:"pipe_mk,omitempty"`
 }
 
 type CreateTaskRequest struct {
@@ -38,12 +42,17 @@ type CreateTaskRequest struct {
 	Description         string  `json:"description"`
 	TargetItemClassName string  `json:"target_item_class_name"`
 	TargetAmount        float64 `json:"target_amount"`
+	HubTier             int     `json:"hub_tier"`
 	AssignedToUserID    *int64  `json:"assigned_to_user_id,omitempty"`
 }
 
 type UpdateTaskRequest struct {
 	Status           *string `json:"status,omitempty"`
 	AssignedToUserID *int64  `json:"assigned_to_user_id,omitempty"`
+	HubTier          *int    `json:"hub_tier,omitempty"`
+	ProductionShards *int    `json:"production_shards,omitempty"`
+	ConveyorMk       *int    `json:"conveyor_mk,omitempty"`
+	PipeMk           *int    `json:"pipe_mk,omitempty"`
 }
 
 func (c *TaskClient) GetTasks(token string, scope string) ([]Task, error) {

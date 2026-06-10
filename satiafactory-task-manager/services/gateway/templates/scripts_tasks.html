@@ -1,5 +1,20 @@
 {{ define "tasks_scripts" }}
 <script>
+function onHubTierChange() {
+    const recipeClass = document.getElementById('recipe-class');
+    const preview = document.getElementById('recipe-preview');
+    const results = document.getElementById('recipe-results');
+    if (recipeClass) recipeClass.value = '';
+    if (preview) preview.innerHTML = '';
+    if (results) {
+        results.innerHTML = '<p class="hint">Тир изменён — найдите рецепт заново.</p>';
+    }
+    const search = document.getElementById('recipe-search');
+    if (search && search.value.trim().length >= 2) {
+        htmx.trigger(search, 'keyup');
+    }
+}
+
 function selectRecipe(className, displayName) {
     document.getElementById('recipe-class').value = className;
     const title = document.getElementById('task-title');
@@ -33,19 +48,56 @@ function currentTaskScope() {
     return el ? (el.value || 'all') : 'all';
 }
 
-function refreshTaskList() {
+let tasksSearchTimer = null;
+
+function buildTasksListURL() {
     const scope = currentTaskScope();
+    const search = document.getElementById('tasks-search');
+    const list = document.getElementById('tasks-list');
+    let url = '/tasks?scope=' + encodeURIComponent(scope);
+    if (search && search.value.trim()) {
+        url += '&q=' + encodeURIComponent(search.value.trim());
+    }
+    const page = list && list.dataset.page ? parseInt(list.dataset.page, 10) : 1;
+    if (page > 1) {
+        url += '&page=' + page;
+    }
+    return url;
+}
+
+function refreshTaskList() {
     const list = document.getElementById('tasks-list');
     if (list) {
-        htmx.ajax('GET', '/tasks?scope=' + scope, {target: '#tasks-list', swap: 'innerHTML'});
+        htmx.ajax('GET', buildTasksListURL(), {target: '#tasks-list', swap: 'innerHTML'});
     }
+}
+
+function onTasksSearchInput() {
+    clearTimeout(tasksSearchTimer);
+    tasksSearchTimer = setTimeout(function() {
+        const list = document.getElementById('tasks-list');
+        if (list) list.dataset.page = '1';
+        refreshTaskList();
+    }, 300);
+}
+
+function switchTasksPage(page) {
+    if (page < 1) return;
+    const list = document.getElementById('tasks-list');
+    if (list) list.dataset.page = String(page);
+    refreshTaskList();
 }
 
 function switchTaskTab(scope) {
     const scopeEl = document.getElementById('task-scope');
     const list = document.getElementById('tasks-list');
+    const search = document.getElementById('tasks-search');
     if (scopeEl) scopeEl.value = scope;
-    if (list) list.dataset.scope = scope;
+    if (list) {
+        list.dataset.scope = scope;
+        list.dataset.page = '1';
+    }
+    if (search) search.value = '';
     const tabAll = document.getElementById('tab-all');
     const tabMine = document.getElementById('tab-mine');
     const tabCompleted = document.getElementById('tab-completed');
@@ -143,11 +195,15 @@ function toggleIngredientChain(btn) {
     let url = btn.dataset.chainUrl;
     if (!url) return;
     const shardInput = document.getElementById('shard-input');
+    const taskDetail = document.querySelector('.task-detail[data-hub-tier]');
+    const u = new URL(url, window.location.origin);
     if (shardInput) {
-        const u = new URL(url, window.location.origin);
         u.searchParams.set('shards', shardInput.value || '0');
-        url = u.pathname + u.search;
     }
+    if (taskDetail && taskDetail.dataset.hubTier) {
+        u.searchParams.set('hub_tier', taskDetail.dataset.hubTier);
+    }
+    url = u.pathname + u.search;
     btn.classList.add('chain-expanded');
     chainHint(btn, true);
     htmx.ajax('GET', url, {target: nest, swap: 'innerHTML'});
@@ -174,8 +230,11 @@ function toggleChainReverse(btn) {
     btn.textContent = 'Обычный рецепт';
     btn.dataset.mode = 'reverse';
     btn.classList.add('active');
-    const url = '/recipes/chain-reverse?recipe=' + encodeURIComponent(btn.dataset.recipe) +
+    let url = '/recipes/chain-reverse?recipe=' + encodeURIComponent(btn.dataset.recipe) +
         '&amount=' + encodeURIComponent(btn.dataset.amount);
+    if (btn.dataset.hubTier) {
+        url += '&hub_tier=' + encodeURIComponent(btn.dataset.hubTier);
+    }
     htmx.ajax('GET', url, {target: '#chain-reverse-view', swap: 'innerHTML'});
 }
 

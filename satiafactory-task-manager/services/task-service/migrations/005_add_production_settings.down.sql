@@ -1,0 +1,3 @@
+ALTER TABLE tasks DROP COLUMN IF EXISTS production_shards;
+ALTER TABLE tasks DROP COLUMN IF EXISTS conveyor_mk;
+ALTER TABLE tasks DROP COLUMN IF EXISTS pipe_mk;

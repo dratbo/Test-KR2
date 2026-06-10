@@ -255,7 +255,119 @@ func PickScenario(scenarios []Scenario, shardBudget int) *Scenario {
 	return &scenarios[len(scenarios)-1]
 }
 
-// DistributeShardBudget splits total shards across overclockable steps.
+// ShardStepInput describes one production step for global shard allocation.
+type ShardStepInput struct {
+	RequiredRate  float64
+	BaseRate      float64
+	Overclockable bool
+}
+
+// TotalShardsUsedForBudget sums shards consumed when each step spends up to budgets[i].
+func TotalShardsUsedForBudget(steps []ShardStepInput, budgets []int) int {
+	total := 0
+	for i, st := range steps {
+		if !st.Overclockable || st.BaseRate <= 0 || st.RequiredRate <= 0 {
+			continue
+		}
+		slots := allocateWithShardBudget(st.RequiredRate, st.BaseRate, budgets[i])
+		total += TotalShardsUsed(slots)
+	}
+	return total
+}
+
+type shardStepRef struct {
+	idx  int
+	step ShardStepInput
+}
+
+func machinesNeeded(st ShardStepInput) float64 {
+	return st.RequiredRate / st.BaseRate
+}
+
+func machineCountForShardBudget(st ShardStepInput, budget int) int {
+	if !st.Overclockable || st.BaseRate <= 0 || st.RequiredRate <= 0 {
+		return 0
+	}
+	if budget <= 0 {
+		return TotalMachines(AllocateWithoutShards(st.RequiredRate, st.BaseRate))
+	}
+	return TotalMachines(allocateWithShardBudget(st.RequiredRate, st.BaseRate, budget))
+}
+
+func shardsUsedForShardBudget(st ShardStepInput, budget int) int {
+	if !st.Overclockable || st.BaseRate <= 0 || st.RequiredRate <= 0 || budget <= 0 {
+		return 0
+	}
+	return TotalShardsUsed(allocateWithShardBudget(st.RequiredRate, st.BaseRate, budget))
+}
+
+func shardAllocationOrder(steps []ShardStepInput) []shardStepRef {
+	order := make([]shardStepRef, 0, len(steps))
+	for i, st := range steps {
+		if !st.Overclockable || st.BaseRate <= 0 || st.RequiredRate <= 0 {
+			continue
+		}
+		order = append(order, shardStepRef{idx: i, step: st})
+	}
+	sort.Slice(order, func(i, j int) bool {
+		a, b := order[i].step, order[j].step
+		am, bm := machinesNeeded(a), machinesNeeded(b)
+		if am != bm {
+			return am > bm
+		}
+		if a.RequiredRate != b.RequiredRate {
+			return a.RequiredRate > b.RequiredRate
+		}
+		return a.BaseRate < b.BaseRate
+	})
+	return order
+}
+
+// DistributeShardBudgetOptimal spends the shared shard pool across the production chain.
+// Each module is assigned to the step where it saves the most buildings; ties prefer
+// steps that need more machines without overclock.
+func DistributeShardBudgetOptimal(steps []ShardStepInput, totalShards int) []int {
+	budgets := make([]int, len(steps))
+	order := shardAllocationOrder(steps)
+	if totalShards <= 0 || len(order) == 0 {
+		return budgets
+	}
+
+	for placed := 0; placed < totalShards; placed++ {
+		bestIdx := -1
+		bestGain := -1.0
+		for _, ref := range order {
+			if shardsUsedForShardBudget(ref.step, budgets[ref.idx]+1) <=
+				shardsUsedForShardBudget(ref.step, budgets[ref.idx]) {
+				continue
+			}
+			gain := float64(
+				machineCountForShardBudget(ref.step, budgets[ref.idx]) -
+					machineCountForShardBudget(ref.step, budgets[ref.idx]+1),
+			)
+			if gain > bestGain {
+				bestGain = gain
+				bestIdx = ref.idx
+			}
+		}
+		if bestIdx < 0 {
+			for _, ref := range order {
+				if shardsUsedForShardBudget(ref.step, budgets[ref.idx]+1) >
+					shardsUsedForShardBudget(ref.step, budgets[ref.idx]) {
+					bestIdx = ref.idx
+					break
+				}
+			}
+		}
+		if bestIdx < 0 {
+			bestIdx = order[0].idx
+		}
+		budgets[bestIdx]++
+	}
+	return budgets
+}
+
+// DistributeShardBudget splits total shards evenly across overclockable steps.
 func DistributeShardBudget(stepCount int, overclockable []bool, totalShards int) []int {
 	budgets := make([]int, stepCount)
 	var indices []int

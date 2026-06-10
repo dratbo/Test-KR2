@@ -5,6 +5,7 @@ type Schematic struct {
 	DisplayName    string            `json:"display_name"`
 	Description    string            `json:"description"`
 	SchematicType  string            `json:"schematic_type"`
+	HubTier        int               `json:"hub_tier"`
 	TimeToComplete float64           `json:"time_to_complete"`
 	Costs          []SchematicCost   `json:"costs"`
 	Unlocks        []SchematicUnlock `json:"unlocks"`

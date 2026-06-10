@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/dratbo/satisfactory-task-manager/gateway/internal/clients"
+	"github.com/dratbo/satisfactory-task-manager/gateway/internal/production"
 )
 
 func formatItemLocalized(item *clients.Item, className string) string {
@@ -28,6 +29,14 @@ func formatItemLocalized(item *clients.Item, className string) string {
 func itemDisplayName(dataClient *clients.DataClient, className string) string {
 	item, _ := dataClient.GetItem(className)
 	return formatItemLocalized(item, className)
+}
+
+func ingredientCraftable(dataClient *clients.DataClient, itemClass string) bool {
+	if production.IsExtractedResource(itemClass) {
+		return false
+	}
+	ok, _ := dataClient.HasRecipeForProduct(itemClass)
+	return ok
 }
 
 func recipeDisplayTitle(recipe *clients.Recipe) string {

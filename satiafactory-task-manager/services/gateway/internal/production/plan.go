@@ -24,19 +24,22 @@ type StepPlan struct {
 	Chosen           *Scenario
 	ShardBudget      int
 	AvailableShards  int
+	BeltLines        int
 }
 
 // PlanInput configures production plan generation.
 type PlanInput struct {
-	ItemClass        string
-	ItemName         string
-	TotalItems       float64
-	RequiredRate     float64
-	Recipe           *clients.Recipe
-	RawResource      bool
-	BuildingLookup   func(className string) string
-	ShardBudget      int
-	AvailableShards  int
+	ItemClass       string
+	ItemName        string
+	TotalItems      float64
+	RequiredRate    float64
+	Recipe          *clients.Recipe
+	RawResource     bool
+	BuildingLookup  func(className string) string
+	ShardBudget     int
+	AvailableShards int
+	Tier            *TierContext
+	Logistics       LogisticsParams
 }
 
 // BuildStepPlan creates a production plan for one chain step.
@@ -55,19 +58,21 @@ func BuildStepPlan(in PlanInput) *StepPlan {
 	}
 
 	if in.RawResource || in.Recipe == nil {
+		ext := PickExtractor(in.ItemClass, in.Tier)
 		plan.IsExtractor = true
-		plan.BuildingClass = DefaultMinerClass
-		plan.BuildingName = BuildingDisplayName(DefaultMinerClass, "")
+		plan.BuildingClass = ext.BuildingClass
+		plan.BuildingName = BuildingDisplayName(ext.BuildingClass, "")
 		if in.BuildingLookup != nil {
-			if name := in.BuildingLookup(DefaultMinerClass); name != "" {
-				plan.BuildingName = BuildingDisplayName(DefaultMinerClass, name)
+			if name := in.BuildingLookup(ext.BuildingClass); name != "" {
+				plan.BuildingName = BuildingDisplayName(ext.BuildingClass, name)
 			}
 		}
-		plan.BaseRate = extractorBaseRate
-		plan.AllowsPowerShard = SupportsPowerShards(DefaultMinerClass)
-		plan.RateTable = BuildRateTable(0, 0, extractorBaseRate)
-		plan.Scenarios = BuildScenarios(in.RequiredRate, extractorBaseRate, plan.AllowsPowerShard, in.ShardBudget)
-		plan.Chosen = PickScenario(plan.Scenarios, in.AvailableShards)
+		plan.BaseRate = ext.BaseRate
+		plan.AllowsPowerShard = SupportsPowerShards(ext.BuildingClass)
+		plan.RateTable = BuildRateTable(0, 0, ext.BaseRate)
+		plan.Scenarios = BuildScenarios(in.RequiredRate, ext.BaseRate, plan.AllowsPowerShard, in.ShardBudget)
+		plan.Chosen = PickScenario(plan.Scenarios, in.ShardBudget)
+		applyLogisticsCap(plan, in)
 		return plan
 	}
 
@@ -80,6 +85,9 @@ func BuildStepPlan(in PlanInput) *StepPlan {
 	plan.BaseRate = ItemsPerMinute(productAmount, in.Recipe.Duration, 100)
 
 	buildingClass := PickFactoryBuilding(in.Recipe.ProducedIn)
+	if in.Tier != nil && buildingClass != "" && !in.Tier.BuildingUnlocked(buildingClass) {
+		return nil
+	}
 	englishName := ""
 	if in.BuildingLookup != nil && buildingClass != "" {
 		englishName = in.BuildingLookup(buildingClass)
@@ -93,8 +101,24 @@ func BuildStepPlan(in PlanInput) *StepPlan {
 	plan.AllowsPowerShard = SupportsPowerShards(buildingClass)
 	plan.RateTable = BuildRateTable(productAmount, in.Recipe.Duration, plan.BaseRate)
 	plan.Scenarios = BuildScenarios(in.RequiredRate, plan.BaseRate, plan.AllowsPowerShard, in.ShardBudget)
-	plan.Chosen = PickScenario(plan.Scenarios, in.AvailableShards)
+	plan.Chosen = PickScenario(plan.Scenarios, in.ShardBudget)
+	applyLogisticsCap(plan, in)
 	return plan
+}
+
+func applyLogisticsCap(plan *StepPlan, in PlanInput) {
+	if plan == nil || plan.Chosen == nil || !in.Logistics.Configured() {
+		return
+	}
+	capacity := in.Logistics.BeltRate()
+	if IsFluidItem(in.ItemClass) {
+		capacity = in.Logistics.PipeRate()
+	}
+	capped := ApplyBeltCap(plan.Chosen.Slots, capacity)
+	plan.BeltLines = len(capped)
+	plan.Chosen.Slots = capped
+	plan.Chosen.TotalMachines = TotalMachines(capped)
+	plan.Chosen.TotalRate = round2(TotalRate(capped))
 }
 
 // RootPlanParams holds parameters for the main task product.

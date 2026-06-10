@@ -29,12 +29,28 @@
             </label>
 
             <label class="field">
+                <span>Тир HUB (прогресс в игре)</span>
+                <select name="hub_tier" id="hub-tier" onchange="onHubTierChange()">
+                    <option value="9" selected>Тир 9 — Космическая программа (всё)</option>
+                    <option value="8">Тир 8 — Ядерная программа</option>
+                    <option value="7">Тир 7 — Алюминий</option>
+                    <option value="6">Тир 6 — Платформа</option>
+                    <option value="5">Тир 5 — Промышленность</option>
+                    <option value="4">Тир 4 — Сталь</option>
+                    <option value="3">Тир 3 — Угольная энергия</option>
+                    <option value="2">Тир 2 — Кварц</option>
+                    <option value="1">Тир 1 — Основы</option>
+                </select>
+                <span class="hint">Доступны только рецепты и постройки, открытые к этому тиру.</span>
+            </label>
+
+            <label class="field">
                 <span>Рецепт из игры</span>
-                <input type="search" id="recipe-search" name="q" placeholder="Iron Plate, железная плата, circuit board…"
+                <input type="search" id="recipe-search" name="q" placeholder="Iron Plate, железная плата, turbo motor…"
                        hx-get="/recipes/search"
                        hx-trigger="keyup changed delay:350ms, search"
                        hx-target="#recipe-results"
-                       hx-include="#recipe-search, #include-alternates"
+                       hx-include="#recipe-search, #include-alternates, #hub-tier"
                        autocomplete="off">
             </label>
             <label class="field field-check">
@@ -42,7 +58,7 @@
                        hx-get="/recipes/search"
                        hx-trigger="change"
                        hx-target="#recipe-results"
-                       hx-include="#recipe-search, #include-alternates">
+                       hx-include="#recipe-search, #include-alternates, #hub-tier">
                 <span>Показать альтернативные рецепты</span>
             </label>
             <div id="recipe-results" class="recipe-results"></div>
@@ -88,7 +104,13 @@
         </div>
         <input type="hidden" id="task-scope" name="task_scope" value="all">
         <p class="hint" id="tasks-hint">Все задачи команды. Нажмите на задачу для подробностей.</p>
-        <div id="tasks-list" class="tasks-list" data-scope="all"
+        <div class="tasks-toolbar">
+            <input type="search" id="tasks-search" class="tasks-search-input"
+                   placeholder="Поиск: название, рецепт, исполнитель…"
+                   autocomplete="off"
+                   oninput="onTasksSearchInput()">
+        </div>
+        <div id="tasks-list" class="tasks-list" data-scope="all" data-page="1"
              hx-get="/tasks?scope=all" hx-trigger="load" hx-swap="innerHTML">
             <p class="hint">Загрузка…</p>
         </div>

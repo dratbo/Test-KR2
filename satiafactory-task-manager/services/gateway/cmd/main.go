@@ -76,6 +76,7 @@ func main() {
 	http.HandleFunc("/tasks/take/", taskHandler.TakeTask)
 	http.HandleFunc("/tasks/status/", taskHandler.UpdateTaskStatus)
 	http.HandleFunc("/tasks/assign/", taskHandler.AssignTask)
+	http.HandleFunc("/tasks/tier/", taskHandler.UpdateHubTier)
 	http.HandleFunc("/icons/", iconHandler.Serve)
 	http.HandleFunc("/recipes/search", recipeHandler.Search)
 	http.HandleFunc("/recipes/preview", recipeHandler.Preview)

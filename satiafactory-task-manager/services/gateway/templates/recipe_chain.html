@@ -6,6 +6,8 @@
     <input type="hidden" name="root_total" value="{{ printf "%g" .RootTotalItems }}">
     <input type="hidden" name="root_rate" value="{{ printf "%g" .RootRequiredRate }}">
     <input type="hidden" name="shards" value="{{ .AvailableShards }}">
+    <input type="hidden" name="hub_tier" value="{{ .HubTier }}">
+    {{ if .RootRecipeClass }}<input type="hidden" name="root_recipe" value="{{ .RootRecipeClass }}">{{ end }}
 
     <div class="recipe-chain-head">
         <img src="{{ .IconURL }}" alt="" class="item-icon" onerror="this.src='/static/placeholder.svg'">
@@ -17,7 +19,10 @@
     </div>
 
     {{ if .RawResource }}
-    <p class="hint chain-raw">Базовый ресурс — рецепта крафта нет (добывается или покупается).</p>
+    <p class="hint chain-raw">Добывается буровой установкой на месторождении.</p>
+    {{ if .ProductionPlan }}
+    {{ template "production_plan.html" .ProductionPlan }}
+    {{ end }}
     {{ else }}
     <div class="chain-toolbar">
         {{ if gt (len .RecipeOptions) 1 }}
@@ -74,7 +79,7 @@
         <li class="ingredient-row">
             {{ if .Craftable }}
             <button type="button" class="ingredient-link"
-                    data-chain-url="/recipes/chain?item={{ .Class }}&amount={{ printf "%g" .Amount }}&depth={{ add $.Depth 1 }}&root_total={{ printf "%g" $.RootTotalItems }}&root_rate={{ printf "%g" $.RootRequiredRate }}&shards={{ $.AvailableShards }}"
+                    data-chain-url="/recipes/chain?item={{ .Class }}&amount={{ printf "%g" .Amount }}&depth={{ add $.Depth 1 }}&root_total={{ printf "%g" $.RootTotalItems }}&root_rate={{ printf "%g" $.RootRequiredRate }}&shards={{ $.AvailableShards }}&hub_tier={{ $.HubTier }}{{ if $.RootRecipeClass }}&root_recipe={{ $.RootRecipeClass }}{{ end }}"
                     onclick="toggleIngredientChain(this)">
                 <img src="{{ .IconURL }}" alt="" class="item-icon" onerror="this.src='/static/placeholder.svg'">
                 <span>{{ .Name }} — {{ printf "%g" .Amount }} предм./мин</span>

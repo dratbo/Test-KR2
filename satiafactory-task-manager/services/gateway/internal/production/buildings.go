@@ -23,13 +23,18 @@ var buildingNamesRU = map[string]string{
 	"Build_MinerMk1_C":         "Буровая установка Mk.1",
 	"Build_MinerMk2_C":         "Буровая установка Mk.2",
 	"Build_MinerMk3_C":         "Буровая установка Mk.3",
-	"Build_Refinery_C":         "Нефтеперерабатывающий завод",
-	"Build_GeneratorBiomass_C": "Биомассовый генератор",
-	"Build_GeneratorCoal_C":    "Угольный генератор",
+	"Build_MinerMk4_C":         "Буровая установка Mk.4",
+	"Build_Refinery_C":           "Нефтеперерабатывающий завод",
+	"Build_Converter_C":          "Конвертер",
+	"Build_QuantumEncoder_C":     "Квантовый кодировщик",
+	"Build_HadronCollider_C":     "Адронный коллайдер",
+	"Build_ParticleAccelerator_C": "Ускоритель частиц",
+	"Build_FrackingExtractor_C":  "Пресноводный экстрактор",
+	"Build_GeneratorBiomass_C":   "Биомассовый генератор",
+	"Build_GeneratorCoal_C":      "Угольный генератор",
+	"Build_GeneratorFuel_C":      "Топливный генератор",
+	"Build_GeneratorNuclear_C":   "Ядерный реактор",
 }
-
-// extractorBaseRate is the normal node extraction rate (items/min at 100% clock).
-const extractorBaseRate = 60.0
 
 // PickFactoryBuilding returns the primary automated factory building from produced_in.
 func PickFactoryBuilding(producedIn []string) string {
@@ -39,6 +44,11 @@ func PickFactoryBuilding(producedIn []string) string {
 		}
 		if strings.HasPrefix(class, "Build_") {
 			return class
+		}
+		if strings.HasPrefix(class, "Desc_") {
+			if build := "Build_" + strings.TrimPrefix(class, "Desc_"); !excludedBuildings[build] {
+				return build
+			}
 		}
 	}
 	return ""
@@ -76,5 +86,5 @@ func formatClassName(className string) string {
 	return s
 }
 
-// DefaultMinerClass is used for raw resources extracted from resource nodes.
-const DefaultMinerClass = "Build_MinerMk1_C"
+// DefaultMinerClass is the preferred solid resource miner for production planning.
+const DefaultMinerClass = "Build_MinerMk3_C"

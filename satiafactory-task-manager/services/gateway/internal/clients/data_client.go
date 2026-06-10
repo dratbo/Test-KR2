@@ -44,13 +44,14 @@ type Item struct {
 }
 
 type Recipe struct {
-	ClassName     string       `json:"class_name"`
-	DisplayName   string       `json:"display_name"`
-	DisplayNameRU string       `json:"display_name_ru,omitempty"`
-	Ingredients   []Ingredient `json:"ingredients"`
-	Products      []Product    `json:"products"`
-	ProducedIn    []string     `json:"produced_in"`
-	Duration      float64      `json:"duration"`
+	ClassName                 string       `json:"class_name"`
+	DisplayName               string       `json:"display_name"`
+	DisplayNameRU             string       `json:"display_name_ru,omitempty"`
+	Ingredients               []Ingredient `json:"ingredients"`
+	Products                  []Product    `json:"products"`
+	ProducedIn                []string     `json:"produced_in"`
+	Duration                  float64      `json:"duration"`
+	ManufactoringMenuPriority int          `json:"manufactoring_menu_priority"`
 }
 
 type Building struct {
@@ -58,6 +59,11 @@ type Building struct {
 	DisplayName string  `json:"display_name"`
 	Description string  `json:"description"`
 	PowerConsumption float64 `json:"power_consumption"`
+}
+
+type UnlockIndex struct {
+	RecipeTiers   map[string]int `json:"recipe_tiers"`
+	BuildingTiers map[string]int `json:"building_tiers"`
 }
 
 func (c *DataClient) SearchRecipes(query string, includeAlternates bool) ([]Recipe, error) {
@@ -176,6 +182,28 @@ func (c *DataClient) GetBuildings() ([]Building, error) {
 		return nil, err
 	}
 	return buildings, nil
+}
+
+func (c *DataClient) GetUnlockIndex() (*UnlockIndex, error) {
+	resp, err := c.client.Get(c.baseURL + "/api/unlocks")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("get unlocks: %s", resp.Status)
+	}
+	var idx UnlockIndex
+	if err := json.NewDecoder(resp.Body).Decode(&idx); err != nil {
+		return nil, err
+	}
+	if idx.RecipeTiers == nil {
+		idx.RecipeTiers = map[string]int{}
+	}
+	if idx.BuildingTiers == nil {
+		idx.BuildingTiers = map[string]int{}
+	}
+	return &idx, nil
 }
 
 func (c *DataClient) GetItem(className string) (*Item, error) {

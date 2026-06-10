@@ -280,8 +280,19 @@ func (r *RecipeRepository) searchByItemDisplayName(term string, limit int, inclu
 
 func fillDisplayNameRU(rec *models.Recipe) {
 	rec.DisplayNameRU = i18n.NameRU(rec.ClassName)
-	if rec.DisplayNameRU == "" && len(rec.Products) > 0 {
-		rec.DisplayNameRU = i18n.NameRU(rec.Products[0].ItemClassName)
+	if len(rec.Products) == 0 {
+		return
+	}
+	productRU := i18n.NameRU(rec.Products[0].ItemClassName)
+	if productRU == "" {
+		return
+	}
+	if i18n.IsAlternateRecipe(rec.ClassName, rec.DisplayName) {
+		rec.DisplayNameRU = "Альтернатива: " + productRU
+		return
+	}
+	if rec.DisplayNameRU == "" || !i18n.HasCyrillic(rec.DisplayNameRU) {
+		rec.DisplayNameRU = productRU
 	}
 }
 
@@ -307,6 +318,7 @@ func (r *RecipeRepository) GetByProduct(itemClass string, includeAlternates bool
 		 JOIN recipe_products p ON p.recipe_class_name = r.class_name
 		 WHERE p.item_class_name = $1`+altFilter+`
 		 ORDER BY
+		   r.manufactoring_menu_priority DESC,
 		   CASE WHEN r.class_name LIKE '%Alternate%' OR r.display_name LIKE 'Alternate:%' THEN 1 ELSE 0 END,
 		   r.display_name`,
 		itemClass,

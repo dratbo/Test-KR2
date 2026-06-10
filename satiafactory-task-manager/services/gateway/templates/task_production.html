@@ -1,24 +1,107 @@
 <div id="production-area">
+
+    <p class="hint factory-tier-hint">{{ .HubTierLabel }} — используются лучшие доступные постройки этого тира.</p>
+
     <div class="factory-plan-toolbar">
+
         <label class="factory-shard-field">
+
             <span>Энергомодулей в наличии</span>
+
             <input type="number" id="shard-input" name="shards" class="shard-input" min="0" step="1"
-                   value="{{ .AvailableShards }}"
-                   hx-get="/tasks/production/{{ .TaskID }}"
-                   hx-trigger="change, keyup changed delay:400ms"
-                   hx-target="#production-area"
-                   hx-swap="outerHTML"
-                   hx-include="#shard-input">
+
+                   value="{{ .AvailableShards }}">
+
         </label>
-        {{ if and .FactoryPlan (gt .FactoryPlan.TotalShardsUsed 0) }}
-        <span class="hint">Используется: {{ .FactoryPlan.TotalShardsUsed }} / {{ .AvailableShards }} шт.</span>
+
+        <label class="factory-shard-field">
+
+            <span>Конвейерная лента</span>
+
+            <select id="conveyor-mk" name="conveyor_mk">
+
+                <option value="0" {{ if eq .ConveyorMk 0 }}selected{{ end }}>— выберите —</option>
+
+                <option value="1" {{ if eq .ConveyorMk 1 }}selected{{ end }}>Mk.1 (60 предм./мин)</option>
+
+                <option value="2" {{ if eq .ConveyorMk 2 }}selected{{ end }}>Mk.2 (120)</option>
+
+                <option value="3" {{ if eq .ConveyorMk 3 }}selected{{ end }}>Mk.3 (270)</option>
+
+                <option value="4" {{ if eq .ConveyorMk 4 }}selected{{ end }}>Mk.4 (480)</option>
+
+                <option value="5" {{ if eq .ConveyorMk 5 }}selected{{ end }}>Mk.5 (780)</option>
+
+                <option value="6" {{ if eq .ConveyorMk 6 }}selected{{ end }}>Mk.6 (1200)</option>
+
+            </select>
+
+        </label>
+
+        <label class="factory-shard-field">
+
+            <span>Трубы (жидкости)</span>
+
+            <select id="pipe-mk" name="pipe_mk">
+
+                <option value="0" {{ if eq .PipeMk 0 }}selected{{ end }}>— выберите —</option>
+
+                <option value="1" {{ if eq .PipeMk 1 }}selected{{ end }}>Mk.1 (300 м³/мин)</option>
+
+                <option value="2" {{ if eq .PipeMk 2 }}selected{{ end }}>Mk.2 (600)</option>
+
+            </select>
+
+        </label>
+
+        <button type="button" class="btn btn-primary btn-sm"
+
+                hx-get="/tasks/production/{{ .TaskID }}"
+
+                hx-target="#production-area"
+
+                hx-swap="outerHTML"
+
+                hx-include="#shard-input, #conveyor-mk, #pipe-mk"
+
+                hx-vals='js:{calc: "1"}'>
+
+            Рассчитать план
+
+        </button>
+
+        {{ if and .ShowFactoryDetails .FactoryPlan (gt .FactoryPlan.TotalShardsUsed 0) }}
+
+        <span class="hint">Используется: {{ .FactoryPlan.TotalShardsUsed }} / {{ .AvailableShards }} энергомод. (по цепочке)</span>
+
         {{ end }}
+
     </div>
 
+
+
+    {{ if not .ShowFactoryDetails }}
+
+    <p class="hint">Укажите энергомодули, уровень конвейеров и труб, затем нажмите «Рассчитать план».</p>
+
+    {{ else }}
+
     {{ if .FactoryPlan }}
+
+    <p class="hint">Логистика: {{ .ConveyorLabel }}, {{ .PipeLabel }}</p>
+
     {{ template "factory_plan.html" .FactoryPlan }}
+
     {{ end }}
+
     {{ if .ProductionPlan }}
+
     {{ template "production_plan.html" .ProductionPlan }}
+
     {{ end }}
+
+    {{ end }}
+
 </div>
+
+

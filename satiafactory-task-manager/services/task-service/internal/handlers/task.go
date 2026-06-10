@@ -37,6 +37,10 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	hubTier := req.HubTier
+	if hubTier <= 0 {
+		hubTier = 9
+	}
 	task := &models.Task{
 		UserID:              userID,
 		Title:               req.Title,
@@ -44,6 +48,7 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		Status:              "pending",
 		TargetItemClassName: req.TargetItemClassName,
 		TargetAmount:        req.TargetAmount,
+		HubTier:             hubTier,
 		AssignedToUserID:    req.AssignedToUserID,
 	}
 
@@ -138,7 +143,7 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	task, err := h.repo.Update(id, req.Status, req.AssignedToUserID)
+	task, err := h.repo.Update(id, req)
 	if err != nil {
 		if err == repository.ErrTaskNotFound {
 			http.Error(w, "task not found", http.StatusNotFound)

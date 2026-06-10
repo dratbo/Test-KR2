@@ -55,13 +55,13 @@ func TestIngredientRequiredRate(t *testing.T) {
 	}
 }
 
-func TestDistributeShardBudget(t *testing.T) {
-	budgets := DistributeShardBudget(3, []bool{true, true, true}, 5)
-	sum := 0
-	for _, b := range budgets {
-		sum += b
+func TestDistributeShardBudgetOptimal(t *testing.T) {
+	steps := []ShardStepInput{
+		{RequiredRate: 210, BaseRate: 15, Overclockable: true},
+		{RequiredRate: 840, BaseRate: 45, Overclockable: true},
 	}
-	if sum != 5 {
-		t.Fatalf("expected total budget 5, got %v", budgets)
+	budgets := DistributeShardBudgetOptimal(steps, 10)
+	if TotalShardsUsedForBudget(steps, budgets) != 10 {
+		t.Fatalf("expected 10 shards used, got budgets %v", budgets)
 	}
 }

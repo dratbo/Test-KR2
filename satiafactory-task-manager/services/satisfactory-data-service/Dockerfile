@@ -9,7 +9,7 @@ FROM alpine:3.20
 WORKDIR /app
 COPY --from=builder /app/data-service .
 COPY --from=builder /app/migrations ./migrations
-COPY data/Docs.json ./data/Docs.json
+COPY data/game-data.json ./data/game-data.json
 COPY data/ru_names.json ./data/ru_names.json
 EXPOSE 8083
 CMD ["./data-service"]

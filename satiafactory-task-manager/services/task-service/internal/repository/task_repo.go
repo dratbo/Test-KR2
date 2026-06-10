@@ -21,7 +21,9 @@ func NewTaskRepository(db *sql.DB) *TaskRepository {
 const taskSelect = `SELECT t.id, t.user_id, COALESCE(u1.username, ''),
                            t.assigned_to_user_id, COALESCE(u2.username, ''),
                            t.title, t.description, t.status, t.created_at,
-                           COALESCE(t.target_item_class_name, ''), COALESCE(t.target_amount, 0)
+                           COALESCE(t.target_item_class_name, ''), COALESCE(t.target_amount, 0),
+                           COALESCE(t.hub_tier, 9),
+                           COALESCE(t.production_shards, 0), COALESCE(t.conveyor_mk, 0), COALESCE(t.pipe_mk, 0)
                     FROM tasks t
                     LEFT JOIN users u1 ON t.user_id = u1.id
                     LEFT JOIN users u2 ON t.assigned_to_user_id = u2.id`
@@ -30,7 +32,8 @@ func scanTask(row interface{ Scan(...any) error }) (*models.Task, error) {
 	var t models.Task
 	var assignedID sql.NullInt64
 	err := row.Scan(&t.ID, &t.UserID, &t.CreatorName, &assignedID, &t.AssigneeName,
-		&t.Title, &t.Description, &t.Status, &t.CreatedAt, &t.TargetItemClassName, &t.TargetAmount)
+		&t.Title, &t.Description, &t.Status, &t.CreatedAt, &t.TargetItemClassName, &t.TargetAmount, &t.HubTier,
+		&t.ProductionShards, &t.ConveyorMk, &t.PipeMk)
 	if err != nil {
 		return nil, err
 	}
@@ -42,10 +45,14 @@ func scanTask(row interface{ Scan(...any) error }) (*models.Task, error) {
 }
 
 func (r *TaskRepository) Create(task *models.Task) error {
-	query := `INSERT INTO tasks (user_id, title, description, status, created_at, target_item_class_name, target_amount, assigned_to_user_id)
-              VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7) RETURNING id, created_at`
+	hubTier := task.HubTier
+	if hubTier <= 0 {
+		hubTier = 9
+	}
+	query := `INSERT INTO tasks (user_id, title, description, status, created_at, target_item_class_name, target_amount, hub_tier, assigned_to_user_id)
+              VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7, $8) RETURNING id, created_at`
 	err := r.db.QueryRow(query, task.UserID, task.Title, task.Description, task.Status,
-		task.TargetItemClassName, task.TargetAmount, task.AssignedToUserID).Scan(&task.ID, &task.CreatedAt)
+		task.TargetItemClassName, task.TargetAmount, hubTier, task.AssignedToUserID).Scan(&task.ID, &task.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("create task: %w", err)
 	}
@@ -121,25 +128,51 @@ func (r *TaskRepository) GetByID(id int64) (*models.Task, error) {
 	return t, nil
 }
 
-func (r *TaskRepository) Update(id int64, status *string, assignedTo *int64) (*models.Task, error) {
+func (r *TaskRepository) Update(id int64, req models.UpdateTaskRequest) (*models.Task, error) {
 	current, err := r.GetByID(id)
 	if err != nil {
 		return nil, err
 	}
 	newStatus := current.Status
-	if status != nil && *status != "" {
-		newStatus = *status
+	if req.Status != nil && *req.Status != "" {
+		newStatus = *req.Status
 	}
 	newAssigned := current.AssignedToUserID
-	if assignedTo != nil {
-		if *assignedTo == 0 {
+	if req.AssignedToUserID != nil {
+		if *req.AssignedToUserID == 0 {
 			newAssigned = nil
 		} else {
-			newAssigned = assignedTo
+			newAssigned = req.AssignedToUserID
 		}
 	}
-	_, err = r.db.Exec(`UPDATE tasks SET status = $1, assigned_to_user_id = $2 WHERE id = $3`,
-		newStatus, newAssigned, id)
+	newHubTier := current.HubTier
+	if req.HubTier != nil && *req.HubTier > 0 {
+		newHubTier = *req.HubTier
+	}
+	newShards := current.ProductionShards
+	if req.ProductionShards != nil {
+		newShards = *req.ProductionShards
+		if newShards < 0 {
+			newShards = 0
+		}
+	}
+	newConveyorMk := current.ConveyorMk
+	if req.ConveyorMk != nil {
+		newConveyorMk = *req.ConveyorMk
+		if newConveyorMk < 0 {
+			newConveyorMk = 0
+		}
+	}
+	newPipeMk := current.PipeMk
+	if req.PipeMk != nil {
+		newPipeMk = *req.PipeMk
+		if newPipeMk < 0 {
+			newPipeMk = 0
+		}
+	}
+	_, err = r.db.Exec(`UPDATE tasks SET status = $1, assigned_to_user_id = $2, hub_tier = $3,
+		production_shards = $4, conveyor_mk = $5, pipe_mk = $6 WHERE id = $7`,
+		newStatus, newAssigned, newHubTier, newShards, newConveyorMk, newPipeMk, id)
 	if err != nil {
 		return nil, fmt.Errorf("update task: %w", err)
 	}
