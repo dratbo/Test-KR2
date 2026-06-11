@@ -1,0 +1,80 @@
+# VPS: полный стек balance + закрытые внутренние порты.
+# Запуск: docker compose -f docker-compose.vps.yml --env-file deploy/.env up -d --build
+
+include:
+  - docker-compose.balance.yml
+
+services:
+  postgres:
+    ports: !reset []
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dratbo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-P@ssw0rd}
+      POSTGRES_DB: ${POSTGRES_DB:-satisfactory}
+    restart: unless-stopped
+
+  user-service:
+    ports: !reset []
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-dratbo}:${POSTGRES_PASSWORD:-P@ssw0rd}@postgres:5432/${POSTGRES_DB:-satisfactory}?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-Bib233asd18-}
+    restart: unless-stopped
+
+  redis:
+    ports: !reset []
+    restart: unless-stopped
+
+  rabbitmq:
+    ports: !reset []
+    restart: unless-stopped
+
+  task-service-1:
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-dratbo}:${POSTGRES_PASSWORD:-P@ssw0rd}@postgres:5432/${POSTGRES_DB:-satisfactory}?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-Bib233asd18-}
+    restart: unless-stopped
+
+  task-service-2:
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-dratbo}:${POSTGRES_PASSWORD:-P@ssw0rd}@postgres:5432/${POSTGRES_DB:-satisfactory}?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-Bib233asd18-}
+    restart: unless-stopped
+
+  task-service-3:
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-dratbo}:${POSTGRES_PASSWORD:-P@ssw0rd}@postgres:5432/${POSTGRES_DB:-satisfactory}?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-Bib233asd18-}
+    restart: unless-stopped
+
+  task-worker:
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-dratbo}:${POSTGRES_PASSWORD:-P@ssw0rd}@postgres:5432/${POSTGRES_DB:-satisfactory}?sslmode=disable
+    restart: unless-stopped
+
+  nginx:
+    ports: !reset []
+    restart: unless-stopped
+
+  satisfactory-data-service:
+    ports: !reset []
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-dratbo}:${POSTGRES_PASSWORD:-P@ssw0rd}@postgres:5432/${POSTGRES_DB:-satisfactory}?sslmode=disable
+    restart: unless-stopped
+
+  gateway:
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    restart: unless-stopped
+
+  prometheus:
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    restart: unless-stopped
+
+  grafana:
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3001}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    restart: unless-stopped

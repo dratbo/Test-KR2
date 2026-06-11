@@ -167,6 +167,19 @@ docker logs task-worker --tail 20
 # Создайте или измените задачу в UI — в логах worker появится [audit] task.created ...
 ```
 
+## Деплой на VPS
+
+Пошаговая инструкция: [deploy/VPS.md](deploy/VPS.md)
+
+```bash
+git clone https://github.com/dratbo/Test-KR2.git /opt/satisfactory-task-manager
+cd /opt/satisfactory-task-manager/satiafactory-task-manager
+cp deploy/.env.example deploy/.env   # смените пароли
+docker compose -f docker-compose.vps.yml --env-file deploy/.env up -d --build
+```
+
+Рекомендуется VPS **4 GB RAM**. Снаружи открыт только порт UI (`GATEWAY_PORT`, по умолчанию 8080).
+
 ## Дальше для «нагруженной» работы
 
 Уже есть: горизонтальное масштабирование, NGINX round-robin, `X-Instance-ID`, healthcheck Postgres, **Redis-кэш**, **Prometheus/Grafana**, **RabbitMQ + task-worker**.

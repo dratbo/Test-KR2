@@ -55,10 +55,11 @@ docker compose -f docker-compose.balance.yml up -d --build
 - **Prometheus + Grafana** — метрики HTTP, кэша, RabbitMQ
 - NGINX с динамическим DNS Docker (устойчивость после пересоздания контейнеров)
 
+**Деплой на VPS:** [satiafactory-task-manager/deploy/VPS.md](satiafactory-task-manager/deploy/VPS.md) (git clone + `docker-compose.vps.yml`).
+
 **Запланировано дальше:**
 
 - Нагрузочное тестирование (`k6` / `hey`)
-- Деплой на VPS (4 GB RAM)
 
 ## Стек
 
