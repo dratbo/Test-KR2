@@ -90,6 +90,10 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8080/login
 
 В браузере: **http://ВАШ_IP:8080**
 
+### HTTPS (Caddy)
+
+**https://privately.proven.hornet:8443** — см. [HTTPS.md](HTTPS.md) (`docker-compose.https.yml`).
+
 ## Шаг 9. Файрвол (если ufw включён)
 
 ```bash

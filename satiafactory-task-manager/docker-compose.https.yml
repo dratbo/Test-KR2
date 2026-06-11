@@ -1,0 +1,31 @@
+# Caddy: HTTPS на :8443 → gateway:8080
+#
+# Запуск (рядом с balance или vps):
+#   docker compose -f docker-compose.balance.yml -f docker-compose.https.yml --env-file deploy/.env up -d
+#
+# UI: https://privately.proven.hornet:8443
+
+services:
+  gateway:
+    ports:
+      - "127.0.0.1:8080:8080"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "8443:8443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - gateway
+    networks:
+      - app-network
+
+volumes:
+  caddy_data:
+  caddy_config:

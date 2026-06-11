@@ -180,6 +180,8 @@ docker compose -f docker-compose.vps.yml --env-file deploy/.env up -d --build
 
 Рекомендуется VPS **4 GB RAM**. Снаружи открыт только порт UI (`GATEWAY_PORT`, по умолчанию 8080).
 
+**HTTPS (Caddy, :8443)** без привязки карты: [deploy/HTTPS.md](deploy/HTTPS.md) — `https://privately.proven.hornet:8443`
+
 ## Дальше для «нагруженной» работы
 
 Уже есть: горизонтальное масштабирование, NGINX round-robin, `X-Instance-ID`, healthcheck Postgres, **Redis-кэш**, **Prometheus/Grafana**, **RabbitMQ + task-worker**.

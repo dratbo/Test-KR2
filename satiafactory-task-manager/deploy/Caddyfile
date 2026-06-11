@@ -1,0 +1,25 @@
+# HTTPS на порту 8443 (443 на VPS занят Telegram proxy).
+# Открывать: https://privately.proven.hornet:8443
+#
+# DNS: A-запись privately.proven.hornet → публичный IP VPS
+# Порты на VPS: 80 (Let's Encrypt), 8443 (HTTPS UI)
+
+{
+	# Укажите свой email для уведомлений Let's Encrypt (можно любой рабочий)
+	# email you@example.com
+	https_port 8443
+}
+
+privately.proven.hornet {
+	reverse_proxy gateway:8080
+}
+
+# Если Let's Encrypt не выдаёт сертификат (домен недоступен с интернета для проверки),
+# замените блок выше на:
+#
+# privately.proven.hornet {
+# 	tls internal
+# 	reverse_proxy gateway:8080
+# }
+#
+# Браузер покажет предупреждение — для демо/сдачи допустимо.
