@@ -38,18 +38,55 @@ services:
     networks:
       - app-network
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: on-failure
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: rabbitmq
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - app-network
+
   task-service-1:
     build: ./services/task-service
     container_name: task-service-1
     restart: on-failure
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8082/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 45s
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
         condition: service_healthy
     environment:
       TASK_SERVICE_PORT: "8082"
       DATABASE_URL: postgres://dratbo:P@ssw0rd@postgres:5432/satisfactory?sslmode=disable
       JWT_SECRET: Bib233asd18-
       INSTANCE_ID: tasks-1
+      REDIS_URL: redis://redis:6379/0
+      REDIS_CACHE_TTL: "60"
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
     networks:
       - app-network
 
@@ -57,14 +94,27 @@ services:
     build: ./services/task-service
     container_name: task-service-2
     restart: on-failure
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8082/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 45s
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
         condition: service_healthy
     environment:
       TASK_SERVICE_PORT: "8082"
       DATABASE_URL: postgres://dratbo:P@ssw0rd@postgres:5432/satisfactory?sslmode=disable
       JWT_SECRET: Bib233asd18-
       INSTANCE_ID: tasks-2
+      REDIS_URL: redis://redis:6379/0
+      REDIS_CACHE_TTL: "60"
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
     networks:
       - app-network
 
@@ -72,14 +122,46 @@ services:
     build: ./services/task-service
     container_name: task-service-3
     restart: on-failure
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8082/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 45s
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
         condition: service_healthy
     environment:
       TASK_SERVICE_PORT: "8082"
       DATABASE_URL: postgres://dratbo:P@ssw0rd@postgres:5432/satisfactory?sslmode=disable
       JWT_SECRET: Bib233asd18-
       INSTANCE_ID: tasks-3
+      REDIS_URL: redis://redis:6379/0
+      REDIS_CACHE_TTL: "60"
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    networks:
+      - app-network
+
+  task-worker:
+    build: ./services/task-worker
+    container_name: task-worker
+    restart: on-failure
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://dratbo:P@ssw0rd@postgres:5432/satisfactory?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
+      REDIS_CACHE_TTL: "60"
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
     networks:
       - app-network
 
@@ -88,9 +170,12 @@ services:
     container_name: nginx-lb
     restart: on-failure
     depends_on:
-      - task-service-1
-      - task-service-2
-      - task-service-3
+      task-service-1:
+        condition: service_healthy
+      task-service-2:
+        condition: service_healthy
+      task-service-3:
+        condition: service_healthy
     ports:
       - "8090:8090"
     volumes:
@@ -132,6 +217,40 @@ services:
       DATA_SERVICE_URL: http://satisfactory-data-service:8083
     ports:
       - "8080:8080"
+    networks:
+      - app-network
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: prometheus
+    restart: on-failure
+    depends_on:
+      - gateway
+      - user-service
+      - task-service-1
+      - satisfactory-data-service
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    networks:
+      - app-network
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: grafana
+    restart: on-failure
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3001:3000"
     networks:
       - app-network
 

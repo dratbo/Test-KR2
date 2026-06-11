@@ -41,21 +41,25 @@ docker compose -f docker-compose.balance.yml up -d --build
 
 Подробности — в [README проекта](satiafactory-task-manager/README.md).
 
-## На чём остановились (состояние на май 2026)
+## На чём остановились (состояние на июнь 2026)
 
 Реализовано и проверено:
 
-- План производства с энергомодулями (общий пул по цепочке; исправлены стальные балки и Modular Frame)
+- План производства с энергомодулями (marginal greedy allocator по цепочке)
 - Логистика (конвейеры / трубы), сворачиваемые секции плана
 - Поиск и пагинация задач (5 на страницу)
 - Цепочка рецептов вперёд / «задом наперёд»
 - Русские названия рецептов v1.0, данные из `game-data.json`
-- Руда только через буровые установки (без «крафта» руды)
+- **Redis-кэш** списков задач (`X-Cache: HIT/MISS`)
+- **RabbitMQ** — события `task.created/updated/deleted`, **task-worker** (audit + прогрев кэша)
+- **Prometheus + Grafana** — метрики HTTP, кэша, RabbitMQ
+- NGINX с динамическим DNS Docker (устойчивость после пересоздания контейнеров)
 
-**Не делали** (запланировано в README как следующий этап для «нагруженной» сдачи):
+**Запланировано дальше:**
 
-- Redis-кэш, очереди (RabbitMQ/NATS), Prometheus/Grafana, нагрузочное тестирование
+- Нагрузочное тестирование (`k6` / `hey`)
+- Деплой на VPS (4 GB RAM)
 
 ## Стек
 
-Go · HTML templates · PostgreSQL · Docker Compose · NGINX
+Go · HTML templates · HTMX · PostgreSQL · Redis · RabbitMQ · Docker Compose · NGINX · Prometheus · Grafana

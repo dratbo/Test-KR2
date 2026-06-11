@@ -6,6 +6,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o task-service ./cmd/main.go
 
 FROM alpine:3.20
+RUN apk add --no-cache wget
 WORKDIR /app
 COPY --from=builder /app/task-service .
 COPY --from=builder /app/migrations ./migrations

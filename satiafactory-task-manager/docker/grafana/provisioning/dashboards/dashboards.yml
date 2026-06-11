@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: satisfactory
+    orgId: 1
+    folder: Satisfactory
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards

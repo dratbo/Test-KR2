@@ -6,9 +6,7 @@ import (
 )
 
 type Config struct {
-	Port          string
 	DatabaseURL   string
-	JWTSecret     string
 	RedisURL      string
 	RedisCacheTTL int
 	RabbitMQURL   string
@@ -16,12 +14,10 @@ type Config struct {
 
 func Load() *Config {
 	return &Config{
-		Port:          getEnv("TASK_SERVICE_PORT", "8082"),
 		DatabaseURL:   getEnv("DATABASE_URL", "postgres://dratbo:P@ssw0rd@localhost:5432/satisfactory?sslmode=disable"),
-		JWTSecret:     getEnv("JWT_SECRET", "Bib233asd18-"),
 		RedisURL:      getEnv("REDIS_URL", ""),
 		RedisCacheTTL: getEnvAsInt("REDIS_CACHE_TTL", 60),
-		RabbitMQURL:   getEnv("RABBITMQ_URL", ""),
+		RabbitMQURL:   getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"),
 	}
 }
 

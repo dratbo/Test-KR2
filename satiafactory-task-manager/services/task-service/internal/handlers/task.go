@@ -7,17 +7,22 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/dratbo/satisfactory-task-manager/task-service/internal/cache"
+	"github.com/dratbo/satisfactory-task-manager/task-service/internal/metrics"
+	"github.com/dratbo/satisfactory-task-manager/task-service/internal/messaging"
 	"github.com/dratbo/satisfactory-task-manager/task-service/internal/middleware"
 	"github.com/dratbo/satisfactory-task-manager/task-service/internal/models"
 	"github.com/dratbo/satisfactory-task-manager/task-service/internal/repository"
 )
 
 type TaskHandler struct {
-	repo *repository.TaskRepository
+	repo      *repository.TaskRepository
+	cache     *cache.TaskListCache
+	publisher *messaging.Publisher
 }
 
-func NewTaskHandler(repo *repository.TaskRepository) *TaskHandler {
-	return &TaskHandler{repo: repo}
+func NewTaskHandler(repo *repository.TaskRepository, taskCache *cache.TaskListCache, publisher *messaging.Publisher) *TaskHandler {
+	return &TaskHandler{repo: repo, cache: taskCache, publisher: publisher}
 }
 
 func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
@@ -58,6 +63,9 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.invalidateAfterChange(task.AssignedToUserID)
+	h.publishEvent(messaging.EventCreated, task.ID, task.UserID, task.Status, task.AssignedToUserID)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(task)
@@ -70,9 +78,19 @@ func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	scope := normalizeScope(r.URL.Query().Get("scope"))
+	if body, hit := h.cache.Get(scope, userID); hit {
+		metrics.RecordCacheHit(scope)
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Cache", "HIT")
+		w.Write(body)
+		return
+	}
+	metrics.RecordCacheMiss(scope)
+
 	var tasks []models.Task
 	var err error
-	switch r.URL.Query().Get("scope") {
+	switch scope {
 	case "mine":
 		tasks, err = h.repo.GetAssignedTo(userID)
 	case "completed":
@@ -85,8 +103,16 @@ func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	body, err := json.Marshal(tasks)
+	if err != nil {
+		http.Error(w, "failed to encode tasks", http.StatusInternalServerError)
+		return
+	}
+	h.cache.Set(scope, userID, body)
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tasks)
+	w.Header().Set("X-Cache", "MISS")
+	w.Write(body)
 }
 
 func (h *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request) {
@@ -128,6 +154,16 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	before, err := h.repo.GetByID(id)
+	if err != nil {
+		if err == repository.ErrTaskNotFound {
+			http.Error(w, "task not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "failed to get task", http.StatusInternalServerError)
+		return
+	}
+
 	var req models.UpdateTaskRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
@@ -153,6 +189,9 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.invalidateAfterChange(before.AssignedToUserID, task.AssignedToUserID)
+	h.publishEvent(messaging.EventUpdated, task.ID, task.UserID, task.Status, before.AssignedToUserID, task.AssignedToUserID)
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(task)
 }
@@ -169,6 +208,16 @@ func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	before, err := h.repo.GetByID(id)
+	if err != nil {
+		if err == repository.ErrTaskNotFound {
+			http.Error(w, "task not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "failed to get task", http.StatusInternalServerError)
+		return
+	}
+
 	if err := h.repo.DeleteByID(id); err != nil {
 		if err == repository.ErrTaskNotFound {
 			http.Error(w, "task not found", http.StatusNotFound)
@@ -178,7 +227,50 @@ func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.invalidateAfterChange(before.AssignedToUserID)
+	h.publishEvent(messaging.EventDeleted, id, before.UserID, before.Status, before.AssignedToUserID)
+
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func normalizeScope(scope string) string {
+	switch scope {
+	case "mine", "completed":
+		return scope
+	default:
+		return "all"
+	}
+}
+
+func (h *TaskHandler) invalidateAfterChange(assigneeIDs ...*int64) {
+	var ids []int64
+	for _, ptr := range assigneeIDs {
+		if ptr != nil && *ptr > 0 {
+			ids = append(ids, *ptr)
+		}
+	}
+	h.cache.InvalidateLists(ids...)
+}
+
+func (h *TaskHandler) publishEvent(eventType string, taskID, userID int64, status string, assigneeIDs ...*int64) {
+	if h.publisher == nil {
+		return
+	}
+	var ids []int64
+	seen := map[int64]bool{}
+	for _, ptr := range assigneeIDs {
+		if ptr != nil && *ptr > 0 && !seen[*ptr] {
+			seen[*ptr] = true
+			ids = append(ids, *ptr)
+		}
+	}
+	h.publisher.Publish(messaging.TaskEvent{
+		Type:              eventType,
+		TaskID:            taskID,
+		UserID:            userID,
+		AssignedToUserIDs: ids,
+		Status:            status,
+	})
 }
 
 func parseTaskID(path string) (int64, error) {

@@ -6,9 +6,12 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/dratbo/satisfactory-task-manager/task-service/internal/cache"
 	"github.com/dratbo/satisfactory-task-manager/task-service/internal/config"
 	"github.com/dratbo/satisfactory-task-manager/task-service/internal/database"
 	"github.com/dratbo/satisfactory-task-manager/task-service/internal/handlers"
+	"github.com/dratbo/satisfactory-task-manager/task-service/internal/messaging"
+	"github.com/dratbo/satisfactory-task-manager/task-service/internal/metrics"
 	"github.com/dratbo/satisfactory-task-manager/task-service/internal/middleware"
 	"github.com/dratbo/satisfactory-task-manager/task-service/internal/repository"
 	_ "github.com/lib/pq"
@@ -33,9 +36,12 @@ func main() {
 	database.RunMigrations(db, "migrations")
 
 	taskRepo := repository.NewTaskRepository(db)
-	taskHandler := handlers.NewTaskHandler(taskRepo)
+	taskCache := cache.NewTaskListCache(cfg.RedisURL, cfg.RedisCacheTTL)
+	publisher := messaging.NewPublisher(cfg.RabbitMQURL)
+	defer publisher.Close()
+	taskHandler := handlers.NewTaskHandler(taskRepo, taskCache, publisher)
+	metrics.MarkInstanceUp()
 
-	// Middleware для добавления заголовка X-Instance-ID
 	instanceMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("X-Instance-ID", instanceID)
@@ -52,10 +58,14 @@ func main() {
 	mux.HandleFunc("DELETE /tasks/{id}", taskHandler.DeleteTask)
 
 	authMiddleware := middleware.AuthMiddleware(cfg)
-	handler := instanceMiddleware(authMiddleware(mux))
+	api := instanceMiddleware(metrics.Middleware(authMiddleware(mux)))
+
+	root := http.NewServeMux()
+	root.Handle("GET /metrics", metrics.Handler())
+	root.Handle("/", api)
 
 	log.Printf("Task service (instance %s) running on port %s", instanceID, cfg.Port)
-	if err := http.ListenAndServe(":"+cfg.Port, handler); err != nil {
+	if err := http.ListenAndServe(":"+cfg.Port, root); err != nil {
 		log.Fatal(err)
 	}
 }

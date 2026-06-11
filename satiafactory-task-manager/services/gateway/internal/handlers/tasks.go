@@ -506,7 +506,7 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		log.Printf("CreateTask error: %v", err)
-		http.Error(w, "Failed to create task", http.StatusInternalServerError)
+		http.Error(w, "Не удалось создать задачу. Сервис задач временно недоступен — обновите страницу и попробуйте снова.", http.StatusInternalServerError)
 		return
 	}
 

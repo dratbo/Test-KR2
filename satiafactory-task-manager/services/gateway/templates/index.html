@@ -13,11 +13,14 @@
 <main class="layout layout-team">
     <section class="panel panel-form">
         <h1>Новая задача</h1>
+        <div id="task-form-error" class="form-error" role="alert"></div>
         <form class="task-form"
               hx-post="/tasks"
               hx-target="#tasks-list"
+              hx-target-error="#task-form-error"
               hx-swap="innerHTML"
-              hx-include="#task-scope">
+              hx-include="#task-scope"
+              hx-on::after-request="if(event.detail.successful) document.getElementById('task-form-error').textContent=''">
             <label class="field">
                 <span>Название</span>
                 <input type="text" name="title" id="task-title" placeholder="Например: Производство стали">

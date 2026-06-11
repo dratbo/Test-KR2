@@ -10,6 +10,7 @@ import (
 	"github.com/dratbo/satisfactory-task-manager/user-service/internal/config"
 	"github.com/dratbo/satisfactory-task-manager/user-service/internal/database"
 	"github.com/dratbo/satisfactory-task-manager/user-service/internal/handlers"
+	"github.com/dratbo/satisfactory-task-manager/user-service/internal/metrics"
 	"github.com/dratbo/satisfactory-task-manager/user-service/internal/middleware"
 	"github.com/dratbo/satisfactory-task-manager/user-service/internal/repository"
 	_ "github.com/lib/pq"
@@ -61,8 +62,12 @@ func main() {
 	mux.Handle("POST /api/users/favorites/{id}", withAuth(usersHandler.AddFavorite))
 	mux.Handle("DELETE /api/users/favorites/{id}", withAuth(usersHandler.RemoveFavorite))
 
+	root := http.NewServeMux()
+	root.Handle("GET /metrics", metrics.Handler())
+	root.Handle("/", metrics.Middleware(mux))
+
 	log.Printf("User service running on port %s", cfg.Port)
-	if err := http.ListenAndServe(":"+cfg.Port, mux); err != nil {
+	if err := http.ListenAndServe(":"+cfg.Port, root); err != nil {
 		log.Fatal(err)
 	}
 }

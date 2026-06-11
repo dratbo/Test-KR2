@@ -11,6 +11,7 @@ import (
 	"github.com/dratbo/satisfactory-task-manager/satisfactory-data-service/internal/database"
 	"github.com/dratbo/satisfactory-task-manager/satisfactory-data-service/internal/i18n"
 	"github.com/dratbo/satisfactory-task-manager/satisfactory-data-service/internal/handlers"
+	"github.com/dratbo/satisfactory-task-manager/satisfactory-data-service/internal/metrics"
 	"github.com/dratbo/satisfactory-task-manager/satisfactory-data-service/internal/parser"
 	"github.com/dratbo/satisfactory-task-manager/satisfactory-data-service/internal/repository"
 )
@@ -75,6 +76,10 @@ func main() {
 	mux.HandleFunc("GET /api/buildings", buildingHandler.ListBuildings)
 	mux.HandleFunc("GET /api/unlocks", unlockHandler.GetIndex)
 
+	root := http.NewServeMux()
+	root.Handle("GET /metrics", metrics.Handler())
+	root.Handle("/", metrics.Middleware(mux))
+
 	log.Printf("Satisfactory Data Service running on port %s", cfg.Port)
-	log.Fatal(http.ListenAndServe(":"+cfg.Port, mux))
+	log.Fatal(http.ListenAndServe(":"+cfg.Port, root))
 }
