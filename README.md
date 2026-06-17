@@ -94,3 +94,23 @@ docker compose -f docker-compose.balance.yml -f docker-compose.https.yml --env-f
 docker compose -f docker-compose.vps.yml ps
 # или с https:
 docker compose -f docker-compose.balance.yml -f docker-compose.https.yml ps
+
+---
+
+Запустить обратно
+Без пересборки (быстро):
+
+docker compose -f docker-compose.vps.yml --env-file deploy/.env up -d
+С HTTPS (Caddy):
+
+docker compose -f docker-compose.balance.yml -f docker-compose.https.yml --env-file deploy/.env up -d
+С пересборкой (если меняли код):
+
+docker compose -f docker-compose.vps.yml --env-file deploy/.env up -d --build
+Проверка:
+
+docker compose -f docker-compose.vps.yml ps
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8080/login
+В браузере: https://153.56.132.67:8080
+
+
