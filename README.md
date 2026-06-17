@@ -64,3 +64,17 @@ docker compose -f docker-compose.balance.yml up -d --build
 ## Стек
 
 Go · HTML templates · HTMX · PostgreSQL · Redis · RabbitMQ · Docker Compose · NGINX · Prometheus · Grafana
+
+--- 
+
+Браузер
+   ↓
+gateway :8080          ← UI, HTML, расчёт плана
+   ├→ user-service :8081        (регистрация, логин, JWT)
+   ├→ nginx :8090 → task-service-1|2|3 :8082   (задачи, кэш, события)
+   ├→ data-service :8083        (рецепты из game-data.json)
+   └→ postgres :5432
+task-service → redis (кэш списков)
+task-service → rabbitmq → task-worker → redis (инвалидация + прогрев)
+prometheus ← /metrics всех сервисов → grafana
+
