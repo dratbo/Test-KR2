@@ -78,3 +78,19 @@ task-service → redis (кэш списков)
 task-service → rabbitmq → task-worker → redis (инвалидация + прогрев)
 prometheus ← /metrics всех сервисов → grafana
 
+---
+
+На VPS (по SSH):
+
+cd /opt/satisfactory-task-manager/satiafactory-task-manager
+Остановить
+docker compose -f docker-compose.vps.yml --env-file deploy/.env down
+Если у вас HTTPS через Caddy:
+
+docker compose -f docker-compose.balance.yml -f docker-compose.https.yml --env-file deploy/.env down
+Проверка:
+
+
+docker compose -f docker-compose.vps.yml ps
+# или с https:
+docker compose -f docker-compose.balance.yml -f docker-compose.https.yml ps
