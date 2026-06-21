@@ -55,7 +55,13 @@ type UpdateTaskRequest struct {
 	PipeMk           *int    `json:"pipe_mk,omitempty"`
 }
 
-func (c *TaskClient) GetTasks(token string, scope string) ([]Task, error) {
+type TasksResult struct {
+	Tasks      []Task
+	InstanceID string
+	Cache      string
+}
+
+func (c *TaskClient) GetTasks(token string, scope string) (*TasksResult, error) {
 	u := c.baseURL + "/tasks"
 	if scope == "mine" || scope == "completed" {
 		u += "?scope=" + scope
@@ -74,7 +80,11 @@ func (c *TaskClient) GetTasks(token string, scope string) ([]Task, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&tasks); err != nil {
 		return nil, err
 	}
-	return tasks, nil
+	return &TasksResult{
+		Tasks:      tasks,
+		InstanceID: resp.Header.Get("X-Instance-ID"),
+		Cache:      resp.Header.Get("X-Cache"),
+	}, nil
 }
 
 func (c *TaskClient) GetTask(token string, id int64) (*Task, error) {

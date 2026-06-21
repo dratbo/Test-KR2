@@ -1,81 +1,63 @@
-# HTTPS через Caddy (без Cloudflare)
+# HTTPS через Caddy
 
-Домен: **privately.proven.hornet**  
-Telegram proxy остаётся на **:443**, UI доступен по **https://privately.proven.hornet:8443**
+Reverse proxy **Caddy** перед gateway: TLS снаружи, HTTP внутри Docker-сети.
 
 ## Схема
 
 ```
-Браузер ──HTTPS :8443──► Caddy ──HTTP──► gateway:8080
-Telegram proxy ───────────── :443 (не трогаем)
+Браузер ──HTTPS──► Caddy ──HTTP──► gateway:8080 (внутри docker)
 ```
 
 ## 1. DNS
 
-Убедитесь, что **privately.proven.hornet** указывает на **публичный IP VPS** (A-запись).
-
-Проверка с вашего ПК:
+A-запись вашего домена должна указывать на **публичный IP VPS**.
 
 ```bash
-ping privately.proven.hornet
-# или
-dig +short privately.proven.hornet
+dig +short your-domain.example
 ```
 
-## 2. Файрвол на VPS
+## 2. Файрвол
 
 ```bash
 sudo ufw allow 80/tcp
-sudo ufw allow 8443/tcp
+sudo ufw allow 443/tcp   # или порт из Caddyfile
 sudo ufw status
 ```
 
-Порт **443** не открывайте для Caddy — он у Telegram.
+## 3. Настройка Caddyfile
 
-## 3. Запуск
+Отредактируйте `deploy/Caddyfile` — укажите свой домен и порт.
+
+Для **Let's Encrypt** (обычный домен `.com`, `.ru`, …):
+
+```
+your-domain.example {
+    reverse_proxy gateway:8080
+}
+```
+
+Для локального/тестового домена без публичного CA — блок с `tls internal` (самоподписанный сертификат, браузер покажет предупреждение).
+
+## 4. Запуск
 
 ```bash
 cd /opt/satisfactory-task-manager/satiafactory-task-manager
 
-# если ещё не запущено — поднимите стек + Caddy
 docker compose -f docker-compose.balance.yml -f docker-compose.https.yml --env-file deploy/.env up -d --build
 ```
 
-Только добавить Caddy к уже работающему стеку:
+Добавить Caddy к уже работающему стеку:
 
 ```bash
 docker compose -f docker-compose.balance.yml -f docker-compose.https.yml --env-file deploy/.env up -d
 ```
 
-## 4. Проверка
+## 5. Проверка
 
 ```bash
 docker logs caddy --tail 30
-curl -sI http://127.0.0.1:8080/login
+curl -sI https://your-domain.example/login
 ```
-
-В браузере: **https://privately.proven.hornet:8443**
-
-Первый запуск: Caddy запросит сертификат Let's Encrypt (нужны открытые **80** и доступность домена из интернета).
-
-## 5. Если сертификат не выдаётся
-
-Для доменов, недоступных для проверки Let's Encrypt (например, только внутри mesh-сети), отредактируйте `deploy/Caddyfile`:
-
-```
-privately.proven.hornet {
-    tls internal
-    reverse_proxy gateway:8080
-}
-```
-
-Перезапуск:
-
-```bash
-docker compose -f docker-compose.balance.yml -f docker-compose.https.yml up -d --force-recreate caddy
-```
-
-Браузер покажет предупреждение — нажмите «Дополнительно» → перейти на сайт.
 
 ## 6. Смена домена
 
@@ -85,11 +67,11 @@ docker compose -f docker-compose.balance.yml -f docker-compose.https.yml up -d -
 docker compose -f docker-compose.balance.yml -f docker-compose.https.yml up -d --force-recreate caddy
 ```
 
-## Остановка HTTPS (оставить только HTTP на localhost)
+## Остановка HTTPS (только HTTP)
 
 ```bash
 docker compose -f docker-compose.balance.yml -f docker-compose.https.yml stop caddy
 docker compose -f docker-compose.balance.yml up -d --force-recreate gateway
 ```
 
-Второй шаг вернёт gateway на `0.0.0.0:8080` (без override из https.yml).
+Второй шаг вернёт gateway на `0.0.0.0:8080` (без override из `https.yml`).

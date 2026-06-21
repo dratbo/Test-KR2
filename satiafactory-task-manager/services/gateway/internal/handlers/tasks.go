@@ -333,14 +333,20 @@ func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 		page = 1
 	}
 
-	tasks, err := h.taskClient.GetTasks(cookie.Value, scope)
+	result, err := h.taskClient.GetTasks(cookie.Value, scope)
 	if err != nil {
 		http.Error(w, "Failed to load tasks", http.StatusInternalServerError)
 		return
 	}
+	if result.InstanceID != "" {
+		w.Header().Set("X-Instance-ID", result.InstanceID)
+	}
+	if result.Cache != "" {
+		w.Header().Set("X-Cache", result.Cache)
+	}
 
-	views := make([]TaskView, 0, len(tasks))
-	for _, t := range tasks {
+	views := make([]TaskView, 0, len(result.Tasks))
+	for _, t := range result.Tasks {
 		views = append(views, h.enrichTask(t))
 	}
 	filtered := filterTaskViews(views, query)

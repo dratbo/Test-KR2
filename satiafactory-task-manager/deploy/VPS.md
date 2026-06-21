@@ -1,6 +1,6 @@
 # Деплой на VPS (git clone + сборка)
 
-Подходит для VPS **4 GB RAM**, **1 ядро**, рядом с Telegram proxy.
+Подходит для VPS **4 GB RAM**, **1 vCPU**.
 
 ## Что будет запущено
 
@@ -14,15 +14,15 @@
 ## Шаг 1. Подключиться к VPS
 
 ```bash
-ssh user@ВАШ_IP
+ssh user@YOUR_SERVER_IP
 ```
 
-## Шаг 2. Проверить порты (важно для Telegram proxy)
+## Шаг 2. Проверить порты
 
 ```bash
 ss -tlnp
 free -h
-docker ps    # если Docker уже есть
+docker ps    # если Docker уже установлен
 ```
 
 Если **8080** занят — в `deploy/.env` укажите другой порт, например `GATEWAY_PORT=8088`.
@@ -35,8 +35,6 @@ sudo usermod -aG docker $USER
 newgrp docker
 docker compose version
 ```
-
-Перезагрузка VPS **не обязательна**.
 
 ## Шаг 4. Клонировать репозиторий
 
@@ -79,7 +77,7 @@ cd /opt/satisfactory-task-manager/satiafactory-task-manager
 docker compose -f docker-compose.vps.yml --env-file deploy/.env up -d --build
 ```
 
-Первая сборка — **10–20 минут** на 1 ядре. Proxy не трогается.
+Первая сборка на 1 vCPU может занять **10–20 минут**.
 
 ## Шаг 8. Проверка
 
@@ -88,11 +86,9 @@ docker compose -f docker-compose.vps.yml ps
 curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8080/login
 ```
 
-В браузере: **http://ВАШ_IP:8080**
+В браузере: **http://YOUR_SERVER_IP:8080**
 
-### HTTPS (Caddy)
-
-**https://privately.proven.hornet:8443** — см. [HTTPS.md](HTTPS.md) (`docker-compose.https.yml`).
+HTTPS через Caddy — см. [HTTPS.md](HTTPS.md).
 
 ## Шаг 9. Файрвол (если ufw включён)
 
@@ -100,8 +96,6 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8080/login
 sudo ufw allow 8080/tcp    # или ваш GATEWAY_PORT
 sudo ufw status
 ```
-
-Порт Telegram proxy **не закрывайте**.
 
 ## Обновление после git push
 
@@ -114,15 +108,15 @@ docker compose -f docker-compose.vps.yml --env-file deploy/.env up -d --build
 
 ## Grafana / Prometheus с вашего ПК
 
-На VPS они слушают только localhost. Туннель:
+На VPS они слушают только localhost. SSH-туннель:
 
 ```bash
-ssh -L 9090:127.0.0.1:9090 -L 3001:127.0.0.1:3001 user@ВАШ_IP
+ssh -L 9090:127.0.0.1:9090 -L 3001:127.0.0.1:3001 user@YOUR_SERVER_IP
 ```
 
 Открыть: http://localhost:3001 (Grafana)
 
-## Остановка (proxy не затрагивается)
+## Остановка
 
 ```bash
 cd /opt/satisfactory-task-manager/satiafactory-task-manager
@@ -145,4 +139,4 @@ bash deploy/vps-deploy.sh
 | `docker build` падает по памяти | swap 2G, `docker system prune -f`, повторить build |
 | 502 при создании задачи | `docker compose ... up -d --force-recreate nginx task-service-1 task-service-2 task-service-3` |
 | Порт занят | сменить `GATEWAY_PORT` в `deploy/.env` |
-| Не открывается снаружи | `ufw allow`, проверить панель хостинга (security groups) |
+| Не открывается снаружи | `ufw allow`, проверить security groups у хостера |
