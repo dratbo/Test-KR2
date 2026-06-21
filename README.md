@@ -22,3 +22,6 @@ Go · PostgreSQL · Docker Compose · NGINX · Redis · RabbitMQ · Prometheus �
 ## Демо
 
 Схема архитектуры: [satiafactory-task-manager/docx/diagram_architecture.png](satiafactory-task-manager/docx/diagram_architecture.png)
+
+## Демонстрация работы
+
