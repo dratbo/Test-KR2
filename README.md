@@ -25,3 +25,5 @@ Go · PostgreSQL · Docker Compose · NGINX · Redis · RabbitMQ · Prometheus �
 
 ## Демонстрация работы
 
+1.	Регистрация
+
