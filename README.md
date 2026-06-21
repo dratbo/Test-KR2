@@ -25,14 +25,21 @@ Go · PostgreSQL · Docker Compose · NGINX · Redis · RabbitMQ · Prometheus �
 
 ## Демонстрация работы
 
-1.	Регистрация
+### 1.	Регистрация
 
 ![Регистрация](satiafactory-task-manager/docx/registration.png)
 
-2. Вход
+### 2. Вход
 
 ![Вход](satiafactory-task-manager/docx/log%20in.png)
 
-3.	Создание задачи
+### 3.	Создание задачи
 
 ![Создание задачи](satiafactory-task-manager/docx/Creating%20a%20task.png)
+
+После входа пользователь переходит к списку задач. Доступны вкладки «Задачи команды», «Свои задачи», «Выполненные», поиск и пагинация.
+При создании задачи пользователь выбирает рецепт Satisfactory, указывает целевую производительность и параметры производства. При повторных запросах списка задач заголовок X-Cache принимает значение HIT; заголовок X-Instance-ID чередуется между tasks-1, tasks-2, tasks-3
+
+### 4. Просмотр задачи
+
+![Просмотр задачи](satiafactory-task-manager/docx/Viewing%20the%20issue.png)
