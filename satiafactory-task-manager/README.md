@@ -212,7 +212,7 @@ satiafactory-task-manager/
 ├── docker/                      # Prometheus, Grafana, init-db
 ├── deploy/                      # VPS, HTTPS, Cloudflare
 ├── loadtest/                    # Нагрузочный тест
-├── docx/                        # Диаграммы (PNG/SVG)
+├── docx/                        # Диаграммы (PNG), материалы для защиты
 └── docker-compose.*.yml
 ```
 
