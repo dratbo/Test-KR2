@@ -27,3 +27,8 @@ Go · PostgreSQL · Docker Compose · NGINX · Redis · RabbitMQ · Prometheus �
 
 1.	Регистрация
 
+![Регистрация](docx/registration.png)
+
+2. Вход
+
+![Вход](docx/log%20in.png)
