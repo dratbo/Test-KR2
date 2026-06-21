@@ -31,4 +31,4 @@ Go · PostgreSQL · Docker Compose · NGINX · Redis · RabbitMQ · Prometheus �
 
 2. Вход
 
-![Вход](docx/log%20in.png)
+![Вход](satiafactory-task-manager/docx/log%20in.png)
